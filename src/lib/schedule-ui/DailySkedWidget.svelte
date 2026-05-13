@@ -3,8 +3,9 @@
   import { Calendar, Interaction, List } from '@event-calendar/core';
   import { CalendarDays, ExternalLink, RefreshCw } from 'lucide-svelte';
   import { createDailySkedGoogleClient } from '../client/google';
-  import type { GoogleConfig, ScheduleCalendar, ScheduleEvent, ScheduleTask, WidgetRange } from './types';
+  import type { DailySkedWidgetProps, ScheduleCalendar, ScheduleEvent, ScheduleTask, WidgetRange } from './types';
   import { addDays, asDate, sameDay, stripTime } from './date';
+  import { themeToStyle } from './theme';
 
   let {
     events = [],
@@ -17,20 +18,9 @@
     error: externalError = '',
     emptyContent = 'Nothing scheduled.',
     dayHover = false,
+    theme,
     onOpenEvent
-  }: {
-    events?: ScheduleEvent[];
-    tasks?: ScheduleTask[];
-    calendars?: ScheduleCalendar[];
-    google?: GoogleConfig;
-    range?: WidgetRange;
-    scheduleHref?: string;
-    loading?: boolean;
-    error?: string;
-    emptyContent?: string;
-    dayHover?: boolean;
-    onOpenEvent?: (event: ScheduleEvent) => void;
-  } = $props();
+  }: DailySkedWidgetProps = $props();
 
   const today = stripTime(new Date());
   const weekStart = addDays(today, -today.getDay());
@@ -47,6 +37,7 @@
 
   const hasExternalData = $derived(events.length > 0 || tasks.length > 0 || calendars.length > 0);
   const connected = $derived(google?.connected ?? true);
+  const themeStyle = $derived(themeToStyle(theme));
   const demoEvents = $derived((!connected && !hasExternalData) ? buildDemoEvents(today) : []);
   const activeEvents = $derived(hasExternalData ? events : [...loadedEvents, ...demoEvents]);
   const activeTasks = $derived(hasExternalData ? tasks : loadedTasks);
@@ -70,7 +61,7 @@
   const eventsById = $derived(new Map(renderEvents.map((event) => [event.id, event])));
   const calendarOptions = $derived({
     view: range === 'upcoming' ? 'listMonth' : 'listDay',
-    date: selectedDate,
+    date: new Date(selectedDate),
     events: renderEvents.map(toCalendarEvent),
     headerToolbar: false,
     height: '100%',
@@ -197,7 +188,7 @@
   }
 </script>
 
-<section class="ds-widget" aria-label="DailySked widget" aria-busy={loading}>
+<section class="ds-widget" style={themeStyle} aria-label="DailySked widget" aria-busy={loading}>
   <header class="ds-widget-header">
     <div>
       <span><CalendarDays size={15} /></span>
@@ -268,7 +259,7 @@
     height: 100%;
     padding: 16px;
     border: 1px solid var(--ds-line);
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--ds-panel);
     color: var(--ds-text);
     overflow: hidden;
@@ -295,7 +286,7 @@
   .ds-widget-header div span {
     width: 28px;
     height: 28px;
-    border-radius: 8px;
+    border-radius: 7px;
     display: grid;
     place-items: center;
     background: #eef8ff;
@@ -307,14 +298,14 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 14px;
-    font-weight: 680;
+    font-weight: 700;
   }
 
   .ds-widget-header button {
     width: 30px;
     height: 30px;
     border: 1px solid var(--ds-line-strong);
-    border-radius: 8px;
+    border-radius: 7px;
     display: grid;
     place-items: center;
     background: var(--ds-panel);
@@ -348,7 +339,7 @@
 
   .ds-widget-week-strip span {
     font-size: 10px;
-    font-weight: 680;
+    font-weight: 700;
     line-height: 1;
   }
 
@@ -360,7 +351,7 @@
     border-radius: 999px;
     color: var(--ds-text);
     font-size: 14px;
-    font-weight: 560;
+    font-weight: 600;
     line-height: 1;
     background: transparent;
   }
@@ -413,7 +404,7 @@
     display: block;
     color: var(--ds-muted);
     font-size: 11px;
-    font-weight: 720;
+    font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
@@ -466,7 +457,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12px;
-    font-weight: 580;
+    font-weight: 600;
     color: color-mix(in srgb, var(--ds-event-color, #2563eb) 68%, #1f2937);
     line-height: 1;
   }
@@ -499,7 +490,7 @@
     padding: 8px 10px;
     margin-bottom: 4px;
     border: 1px solid var(--ds-blue-line);
-    border-radius: 8px;
+    border-radius: 7px;
     background: color-mix(in srgb, var(--ds-blue) 7%, white);
   }
 
@@ -511,7 +502,7 @@
 
   .ds-widget-connect-bar strong {
     font-size: 12px;
-    font-weight: 680;
+    font-weight: 700;
     color: var(--ds-text);
   }
 
@@ -531,7 +522,7 @@
     color: white;
     text-decoration: none;
     font-size: 11.5px;
-    font-weight: 650;
+    font-weight: 600;
     white-space: nowrap;
   }
 
@@ -571,7 +562,7 @@
     min-height: 34px;
     margin-top: 12px;
     border: 1px solid var(--ds-line-strong);
-    border-radius: 8px;
+    border-radius: 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -579,7 +570,7 @@
     color: var(--ds-text);
     text-decoration: none;
     font-size: 13px;
-    font-weight: 680;
+    font-weight: 700;
   }
 
   .ds-widget-link:hover {

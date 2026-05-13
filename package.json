@@ -1,7 +1,26 @@
 {
 	"name": "dailysked",
-	"version": "0.2.0-alpha.1",
+	"version": "0.2.1-alpha",
+	"description": "Opinionated Svelte scheduling UI for Google Calendar and Google Tasks.",
 	"type": "module",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/dailysked/dailysked.git"
+	},
+	"bugs": {
+		"url": "https://github.com/dailysked/dailysked/issues"
+	},
+	"homepage": "https://github.com/dailysked/dailysked#readme",
+	"keywords": [
+		"svelte",
+		"sveltekit",
+		"calendar",
+		"schedule",
+		"google-calendar",
+		"google-tasks",
+		"tasks"
+	],
 	"files": [
 		"dist",
 		"docs",
@@ -12,6 +31,9 @@
 	"sideEffects": [
 		"**/*.css"
 	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -34,6 +56,7 @@
 		"package": "svelte-package",
 		"prepack": "pnpm package",
 		"preview": "vite preview",
+		"test": "vitest run",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
@@ -59,7 +82,8 @@
 		"svelte": "^5.55.2",
 		"svelte-check": "^4.4.6",
 		"typescript": "^6.0.2",
-		"vite": "^8.0.7"
+		"vite": "^8.0.7",
+		"vitest": "^4.0.8"
 	},
 	"packageManager": "pnpm@10.26.1"
 }

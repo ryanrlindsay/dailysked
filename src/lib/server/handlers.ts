@@ -62,15 +62,15 @@ export interface GoogleHandlerConfig {
 	 *
 	 * @example DB-backed store
 	 * tokenStore: {
-	 *   async load({ event }) {
+	 *   async load(event) {
 	 *     const userId = event.locals.user.id;
 	 *     return db.googleAccounts.findByUserId(userId);
 	 *   },
-	 *   async save({ event }, session) {
+	 *   async save(event, session) {
 	 *     const userId = event.locals.user.id;
 	 *     await db.googleAccounts.upsert({ userId, ...session });
 	 *   },
-	 *   async delete({ event }) {
+	 *   async delete(event) {
 	 *     const userId = event.locals.user.id;
 	 *     await db.googleAccounts.deleteByUserId(userId);
 	 *   }

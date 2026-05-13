@@ -1,20 +1,20 @@
 <script lang="ts">
   import CommandPalette from './CommandPalette.svelte';
+  import CalendarModeContent from './CalendarModeContent.svelte';
   import CreateListDialog from './CreateListDialog.svelte';
   import CreateCalendarDialog from './CreateCalendarDialog.svelte';
-  import EventCalendarBridge from './EventCalendarBridge.svelte';
   import EventEditor from './EventEditor.svelte';
   import GoogleSettingsDialog from './GoogleSettingsDialog.svelte';
   import Header from './Header.svelte';
-  import MonthView from './MonthView.svelte';
   import Sidebar from './Sidebar.svelte';
-  import TaskView from './TaskView.svelte';
-  import YearView from './YearView.svelte';
+  import TaskModeContent from './TaskModeContent.svelte';
   import { createDailySkedGoogleClient } from '../client/google';
-  import type { AppMode, GoogleConfig, MaybePromise, ScheduleCalendar, ScheduleEvent, ScheduleTask, ScheduleView, TaskList, TaskNavView, TeamManagementOptions, TeamMember, WorkspaceUser } from './types';
-  import { untrack } from 'svelte';
+  import type { AppMode, DailySkedCalendarProps, ScheduleCalendar, ScheduleEvent, ScheduleTask, ScheduleView, TaskList, TaskNavView, TeamMember } from './types';
+  import { onMount, untrack } from 'svelte';
   import { addDays, addMonths, asDate, stripTime } from './date';
+  import { calculateShellLayout, hasLayoutLength, resolveLayoutOptions, toCssLength } from './layout';
   import { mergeWorkspaceUsers } from './users';
+  import { themeToStyle } from './theme';
 
   let {
     initialDate = new Date(),
@@ -36,36 +36,19 @@
     onTaskUpdate,
     onEventOpen,
     sidebar = true,
+    layout,
+    sidebarPosition = 'left',
+    sidebarBleedMode = 'auto',
+    layoutMode = 'auto',
+    maxContentWidth,
+    contentAlign = 'left',
+    edgeGutter = 24,
     dayHover = false,
     showMiniCalendarEventDots = false,
+    theme,
     onTaskListCreate,
     onTeamMemberCreate
-  }: {
-    initialDate?: Date;
-    initialMode?: AppMode;
-    initialView?: ScheduleView;
-    events?: ScheduleEvent[];
-    calendars?: ScheduleCalendar[];
-    tasks?: ScheduleTask[];
-    taskLists?: TaskList[];
-    teamMembers?: TeamMember[];
-    workspaceUsers?: WorkspaceUser[];
-    teamManagement?: TeamManagementOptions;
-    initialTaskListId?: string;
-    /** Google account config. Replaces the individual googleConnected/googleConnectHref/etc props. */
-    google?: GoogleConfig;
-    onEventCreate?: (event: ScheduleEvent) => MaybePromise<ScheduleEvent | void>;
-    onEventUpdate?: (event: ScheduleEvent) => MaybePromise<ScheduleEvent | void>;
-    onEventDelete?: (event: ScheduleEvent) => MaybePromise<void>;
-    onTaskCreate?: (task: ScheduleTask) => MaybePromise<ScheduleTask | void>;
-    onTaskUpdate?: (task: ScheduleTask) => MaybePromise<ScheduleTask | void>;
-    onEventOpen?: (event: ScheduleEvent) => void;
-    onTaskListCreate?: (list: TaskList) => MaybePromise<TaskList | void>;
-    onTeamMemberCreate?: (member: TeamMember) => MaybePromise<TeamMember | void>;
-    sidebar?: boolean;
-    dayHover?: boolean;
-    showMiniCalendarEventDots?: boolean;
-  } = $props();
+  }: DailySkedCalendarProps = $props();
 
   let mode = $state<AppMode>(untrack(() => initialMode));
   let currentDate = $state(untrack(() => stripTime(initialDate)));
@@ -86,8 +69,28 @@
   let taskNavView = $state<TaskNavView>('inbox');
   let activeMemberId = $state('');
   let saveError = $state('');
+  let shellEl = $state<HTMLDivElement | null>(null);
+  let useViewportEdgeSpacer = $state(false);
+  let sidebarBleedPx = $state(0);
 
   const googleConnected = $derived(google?.connected ?? false);
+  const themeStyle = $derived(themeToStyle(theme));
+  const resolvedLayout = $derived(resolveLayoutOptions(layout, {
+    layoutMode,
+    sidebarBleedMode,
+    maxContentWidth,
+    contentAlign,
+    edgeGutter
+  }));
+  const hasMaxContentWidth = $derived(hasLayoutLength(resolvedLayout.maxContentWidth));
+  const shellStyle = $derived.by(() => {
+    const styleEntries: string[] = [];
+    if (themeStyle) styleEntries.push(themeStyle);
+    if (hasMaxContentWidth) styleEntries.push(`--ds-layout-max-width:${toCssLength(resolvedLayout.maxContentWidth)}`);
+    styleEntries.push(`--ds-edge-gutter:${toCssLength(resolvedLayout.edgeGutter)}`);
+    styleEntries.push(`--ds-sidebar-bleed:${sidebarBleedPx}px`);
+    return styleEntries.join(';');
+  });
   const googleConnectHref = $derived(google?.connectHref ?? '/api/google/oauth/start');
   const googleDisconnectHref = $derived(google?.disconnectHref ?? '/api/google/oauth/disconnect');
   const googleAccountEmail = $derived(google?.email);
@@ -122,6 +125,49 @@
 
   const renderEvents = $derived([...visibleEvents, ...taskEvents, ...draftEvents]);
   const activeTaskListName = $derived(taskLists.find((list) => list.id === activeTaskListId)?.name ?? 'All tasks');
+
+  function updateEdgeSpacer() {
+    if (!shellEl || typeof window === 'undefined') return;
+    const measurementEl = shellEl.parentElement ?? shellEl;
+    const rect = measurementEl.getBoundingClientRect();
+    const next = calculateShellLayout({
+      windowWidth: window.innerWidth,
+      shellLeft: rect.left,
+      shellRight: rect.right,
+      hasSidebar: sidebar,
+      sidebarPosition,
+      sidebarBleedMode: resolvedLayout.sidebarBleedMode,
+      layoutMode: resolvedLayout.layoutMode,
+      desktopBreakpoint: resolvedLayout.desktopBreakpoint
+    });
+    sidebarBleedPx = mode === 'tasks' ? 0 : next.sidebarBleedPx;
+    useViewportEdgeSpacer = next.useViewportEdgeSpacer;
+  }
+
+  onMount(() => {
+    if (typeof window === 'undefined') return;
+    updateEdgeSpacer();
+    const resizeObserver = new ResizeObserver(updateEdgeSpacer);
+    const measurementEl = shellEl?.parentElement ?? shellEl;
+    if (measurementEl) resizeObserver.observe(measurementEl);
+    window.addEventListener('resize', updateEdgeSpacer);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateEdgeSpacer);
+    };
+  });
+
+  $effect(() => {
+    resolvedLayout.layoutMode;
+    resolvedLayout.sidebarBleedMode;
+    resolvedLayout.desktopBreakpoint;
+    mode;
+    sidebar;
+    sidebarPosition;
+    shellEl;
+    updateEdgeSpacer();
+  });
 
   function step(amount: number) {
     if (mode === 'tasks') return;
@@ -205,9 +251,7 @@
     return error instanceof Error ? error.message : fallback;
   }
 
-  // --- Google sync helpers ---
-  // Each reads current prop values at call time. Individual on* props take
-  // precedence; syncEndpoint auto-wires the rest when provided.
+  // Google sync helpers
 
   async function callEventCreate(event: ScheduleEvent): Promise<ScheduleEvent | void> {
     if (onEventCreate) return onEventCreate(event);
@@ -244,7 +288,7 @@
       .updateTask(task.listId, task);
   }
 
-  // --- Mutation handlers ---
+  // Mutation handlers
 
   async function saveEvent(event: ScheduleEvent) {
     if (!canCreateGoogleItem()) { saveError = 'Google Calendar is not connected.'; return; }
@@ -425,14 +469,14 @@
 
   function chooseDate(date: Date) {
     const clean = stripTime(date);
-    currentDate = clean;
-    selectedDate = clean;
+    currentDate = new Date(clean);
+    selectedDate = new Date(clean);
   }
 
   function changeView(next: ScheduleView) {
     mode = 'calendar';
     view = next;
-    currentDate = selectedDate;
+    currentDate = new Date(selectedDate);
   }
 
   function jumpToMonth(date: Date) {
@@ -499,7 +543,21 @@
 
 </script>
 
-<div class="ds-app-shell" class:task-mode={mode === 'tasks'} class:no-sidebar={!sidebar} class:day-hover={dayHover}>
+<div
+  bind:this={shellEl}
+  class="ds-app-shell"
+  style={shellStyle}
+  class:task-mode={mode === 'tasks'}
+  class:no-sidebar={!sidebar}
+  class:sidebar-right={sidebarPosition === 'right'}
+  class:sidebar-bleed={sidebarBleedPx > 0}
+  class:layout-constrained={hasMaxContentWidth}
+  class:align-center={resolvedLayout.contentAlign === 'center'}
+  class:align-right={resolvedLayout.contentAlign === 'right'}
+  class:edge-spacer={useViewportEdgeSpacer}
+  class:sizing-flex-parent={resolvedLayout.sizing === 'flex-parent'}
+  class:day-hover={dayHover}
+>
   {#if sidebar}
   <Sidebar
     {mode}
@@ -545,53 +603,38 @@
     />
 
     <div class="ds-content">
-      {#if googleWriteLocked && mode === 'calendar'}
-        <section class="ds-google-connect-banner" aria-label="Google connection required">
-          <div>
-            <strong>Connect Google Calendar to create and sync items</strong>
-            <span>DailySked writes events and tasks through the user's Google OAuth session.</span>
-          </div>
-          <a href={googleConnectHref}>Connect Google</a>
-        </section>
-      {:else if googleAccountEmail && mode === 'calendar'}
-        <div class="ds-google-connected-pill" aria-label="Google account connected">
-          <span></span>
-          Connected to {googleAccountEmail}
-        </div>
-      {/if}
-
-      {#if saveError && !editorOpen}
-        <div class="ds-save-error" role="alert">
-          {saveError}
-          <button type="button" aria-label="Dismiss error" onclick={() => (saveError = '')}>×</button>
-        </div>
-      {/if}
-
       {#if mode === 'tasks'}
-        <TaskView
-          tasks={tasks}
-          lists={taskLists}
+        <TaskModeContent
+          {tasks}
+          {taskLists}
           {teamMembers}
-          navView={taskNavView}
-          activeListId={activeTaskListId}
+          {taskNavView}
+          {activeTaskListId}
           {activeMemberId}
           onAddTask={addTask}
           onToggleTask={toggleTask}
           onMoveTask={moveTask}
           onUpdateTask={updateTask}
         />
-      {:else if view === 'dayGridYear'}
-        <YearView {currentDate} events={renderEvents} onMonthClick={jumpToMonth} />
-      {:else if view === 'dayGridMonth'}
-        <MonthView {currentDate} {selectedDate} events={renderEvents} calendars={sources} onEventClick={openEvent} onDayClick={(date) => openCreate(date)} onDayDoubleClick={(date) => openCreate(date)} onRangeCreate={openRangeCreate} />
       {:else}
-        <EventCalendarBridge
-          events={renderEvents}
+        <CalendarModeContent
+          {googleWriteLocked}
+          {googleAccountEmail}
+          {googleConnectHref}
+          {saveError}
+          {editorOpen}
+          onDismissError={() => (saveError = '')}
           {view}
           {currentDate}
-          onEventClick={openEvent}
-          onSelect={handleEngineSelect}
-          onEventDrop={handleEngineDrop}
+          {selectedDate}
+          {renderEvents}
+          calendars={sources}
+          onOpenEvent={openEvent}
+          onOpenCreateAtDay={(date) => openCreate(date)}
+          onOpenCreateRange={openRangeCreate}
+          onEngineSelect={handleEngineSelect}
+          onEngineDrop={handleEngineDrop}
+          onJumpToMonth={jumpToMonth}
         />
       {/if}
     </div>

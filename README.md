@@ -1,200 +1,242 @@
-DailySked is a Svelte-native scheduling product surface for Google Calendar and Google Tasks.
+<div align="center">
+  <img src="static/dailysked-icon.svg" alt="DailySked" width="72" height="72">
 
-The goal is not to be a generic calendar protocol adapter. DailySked gives Svelte apps a polished calendar, task workspace, editor, sidebar, command palette, and Google OAuth-backed sync path so developers do not have to design a calendar product from scratch.
+  <h1>DailySked</h1>
 
-## Product stance
+  <p>
+    <strong>Svelte-first scheduling UI with Google Calendar and Tasks sync.</strong>
+  </p>
 
-- Google Calendar is the primary event source.
-- Google Tasks is the primary task source.
-- Creating and syncing real events should happen through a user's Google OAuth session.
-- Demo data is only for local product previews and should not be treated as a production data source.
-- iCal, CalDAV, Outlook, and other providers are intentionally out of scope for this phase.
+  <p>
+    A ready calendar and task workspace with sidebar navigation, calendar views,
+    task mode, event editing, command palette, dashboard widget, and Google OAuth sync helpers.
+  </p>
 
-## Implementation status
+  <p>
+    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-1f8fb8"></a>
+    <img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha-f97316">
+    <img alt="Svelte 5" src="https://img.shields.io/badge/Svelte-5-ff3e00">
+  </p>
+</div>
 
-The UI layer — calendar views, task workspace, dashboard widget, event editor, sidebar, command palette, and event pill rendering — is complete.
+<p align="center">
+  <a href="docs/assets/dailysked-demo.png">
+    <img src="docs/assets/dailysked-demo.png" alt="DailySked demo showing the product header, install command, week calendar, sidebar, and Google connection prompt" width="960">
+  </a>
+</p>
 
-The Google integration is functional end-to-end in the demo app:
+## Why DailySked?
 
-- **OAuth** — start and callback routes exchange the authorization code and store the session in an httpOnly cookie.
-- **Token refresh** — access tokens are refreshed automatically on page load and sync requests.
-- **Data sync** — `POST /api/google/sync` fetches real calendars, events, task lists, and tasks from the Google APIs and returns them. The page loads real Google data when connected.
+- **Product-ready UI**: calendar shell, mini calendar, sidebar filters, week/month/year views, task workspace, and compact widget.
+- **Google-first integration**: SvelteKit handlers and typed client helpers for Google Calendar and Google Tasks.
+- **Stubborn but configurable layout**: DailySked owns its internal calendar geometry, while host apps opt into named layout presets when they need app-shell behavior.
+- **Contributor-friendly core**: MIT licensed, typed, tested, and built as a reusable Svelte package.
 
-For production use, replace the cookie-based token storage with your own encrypted server-side session store and derive `googleConnected` from the authenticated user record.
+## Status
 
-## SvelteKit integration
+DailySked is early alpha software. The core Svelte UI, widget, Google adapter, SvelteKit handlers, and demo app are usable, but APIs may still change before a stable `1.0`.
 
-`dailysked/server` exports a `createDailySkedGoogleHandlers` factory. Call it once with your Google credentials and it returns ready-to-export SvelteKit route handlers — no backend code to write.
+## Install
 
-See `docs/sveltekit-google.md` for the full copy-paste route guide.
+```bash
+pnpm add dailysked
+```
 
-**1. Create your handler instance** (e.g. `src/lib/google.ts`):
+Import the component and stylesheet:
+
+```svelte
+<script>
+  import { DailySkedCalendar } from 'dailysked';
+  import 'dailysked/styles.css';
+</script>
+```
+
+## Quick Start
+
+For a full route-by-route SvelteKit guide, see [docs/sveltekit-google.md](docs/sveltekit-google.md).
+
+### 1. Create Google handlers
 
 ```ts
-import { createDailySkedGoogleHandlers } from 'dailysked/server';
+// src/lib/dailysked-google.ts
 import { env } from '$env/dynamic/private';
+import { createDailySkedGoogleHandlers } from 'dailysked/server';
 
 export const google = createDailySkedGoogleHandlers({
-  clientId:     env.GOOGLE_CLIENT_ID,
+  clientId: env.GOOGLE_CLIENT_ID,
   clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri:  env.GOOGLE_REDIRECT_URI,
+  redirectUri: env.GOOGLE_REDIRECT_URI,
   afterConnectRedirect: '/schedule'
 });
 ```
 
-**2. Wire the routes** — one line each:
+Set these environment variables:
+
+```bash
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+GOOGLE_REDIRECT_URI="http://localhost:5173/api/google/oauth/callback"
+```
+
+In Google Cloud, enable the Google Calendar API and Google Tasks API, then add the redirect URI to the OAuth client.
+
+### 2. Wire SvelteKit routes
 
 ```ts
 // src/routes/api/google/oauth/start/+server.ts
-import { google } from '$lib/google';
+import { google } from '$lib/dailysked-google';
 export const GET = google.oauthStart;
+```
 
+```ts
 // src/routes/api/google/oauth/callback/+server.ts
+import { google } from '$lib/dailysked-google';
 export const GET = google.oauthCallback;
+```
 
+```ts
 // src/routes/api/google/oauth/disconnect/+server.ts
+import { google } from '$lib/dailysked-google';
 export const GET = google.oauthDisconnect;
 export const POST = google.oauthDisconnect;
+```
 
+```ts
 // src/routes/api/google/sync/+server.ts
+import { google } from '$lib/dailysked-google';
 export const POST = google.sync;
+```
 
+```ts
 // src/routes/api/google/events/+server.ts
+import { google } from '$lib/dailysked-google';
 export const { POST, PUT, DELETE } = google.events;
+```
 
+```ts
 // src/routes/api/google/tasks/+server.ts
+import { google } from '$lib/dailysked-google';
 export const { POST, PUT, DELETE } = google.tasks;
 ```
 
-**3. Load data in your layout**:
+### 3. Load schedule data
 
 ```ts
 // src/routes/schedule/+page.server.ts
-import { google } from '$lib/google';
+import { google } from '$lib/dailysked-google';
 
 export const load = async (event) => {
   const data = await google.loadData(event);
   return {
     googleAccount: data?.account ?? null,
-    calendars:     data?.calendars ?? [],
-    events:        data?.events ?? [],
-    taskLists:     data?.taskLists ?? [],
-    tasks:         data?.tasks ?? []
+    calendars: data?.calendars ?? [],
+    events: data?.events ?? [],
+    taskLists: data?.taskLists ?? [],
+    tasks: data?.tasks ?? []
   };
 };
 ```
 
-**4. Mount the component**:
+### 4. Mount the calendar
 
 ```svelte
+<script>
+  import { DailySkedCalendar } from 'dailysked';
+  import 'dailysked/styles.css';
+
+  let { data } = $props();
+</script>
+
 <DailySkedCalendar
   calendars={data.calendars}
   events={data.events}
   taskLists={data.taskLists}
   tasks={data.tasks}
   google={{
-    connected:    Boolean(data.googleAccount),
-    email:        data.googleAccount?.email,
+    connected: Boolean(data.googleAccount),
+    email: data.googleAccount?.email,
+    connectHref: '/api/google/oauth/start',
+    disconnectHref: '/api/google/oauth/disconnect',
     syncEndpoint: '/api/google'
   }}
 />
 ```
 
-That's the full integration. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` in your env and it works end-to-end.
+## Layout
 
-### Client helper
-
-`dailysked/client` exports the same endpoint contract used by `DailySkedCalendar` and `DailySkedWidget`:
-
-```ts
-import { createDailySkedGoogleClient } from 'dailysked/client';
-
-const google = createDailySkedGoogleClient({ endpoint: '/api/google' });
-const data = await google.sync();
-const savedEvent = await google.createEvent('primary', event);
-```
-
-### Custom token storage
-
-By default tokens are stored in httpOnly cookies. To persist them in a database instead, pass a `tokenStore`:
-
-```ts
-export const google = createDailySkedGoogleHandlers({
-  clientId:     env.GOOGLE_CLIENT_ID,
-  clientSecret: env.GOOGLE_CLIENT_SECRET,
-  redirectUri:  env.GOOGLE_REDIRECT_URI,
-  tokenStore: {
-    async load({ event }) {
-      const userId = event.locals.user.id;
-      return db.googleAccounts.findByUserId(userId);
-    },
-    async save({ event }, session) {
-      const userId = event.locals.user.id;
-      await db.googleAccounts.upsert({ userId, ...session });
-    },
-    async delete({ event }) {
-      const userId = event.locals.user.id;
-      await db.googleAccounts.deleteByUserId(userId);
-    }
-  }
-});
-```
-
-The `GoogleTokenStore` interface is exported from `dailysked/server` for typing your implementation.
-
-## Local demo
-
-```bash
-pnpm install
-pnpm dev
-```
-
-The local demo uses neutral sample events and tasks. Production apps should connect the Google OAuth routes and persist the resulting user/session tokens in their own backend.
-
-By default, `DailySkedCalendar` expects a Google connection before creating, moving, editing, or deleting calendar/task items:
+DailySked expects the host app to provide a real layout area. By default it fills that explicit host box.
 
 ```svelte
 <DailySkedCalendar
-  events={events}
-  calendars={calendars}
-  tasks={tasks}
-  taskLists={taskLists}
-  google={{
-    connected: Boolean(googleAccount),
-    email: googleAccount?.email,
-    connectHref: "/api/google/oauth/start",
-    disconnectHref: "/api/google/oauth/disconnect",
-    syncEndpoint: "/api/google"
+  layout={{
+    mode: 'container',
+    sizing: 'host-box',
+    sidebarBleed: 'auto',
+    edgeGutter: 24
   }}
 />
 ```
 
-For local screenshots or static demos, pass `google={{ connected: true, requireConnection: false }}`.
+Options:
 
-## Widget
+- `layout.sizing = 'host-box'` fills an explicit host box with `height: 100%`. This is the default.
+- `layout.sizing = 'flex-parent'` opts into flex-parent stretch behavior when the host route owns height through flex growth.
+- `layout.mode = 'container'` follows host container geometry on the non-sidebar side.
+- `layout.mode = 'auto'` uses viewport edge spacer logic when DailySked is flush with the viewport.
+- `layout.sidebarBleed = 'auto'` lets the sidebar side snap to the app-shell edge.
+- `layout.sidebarBleed = 'container'` keeps both sides inside the host container.
 
-DailySked also exports a compact dashboard widget based on the same Google data model. It can use preloaded events/tasks or fetch from the same Google sync endpoint as the full calendar.
+Named presets are exported as `DAILY_SKED_LAYOUT_PRESETS`:
 
 ```svelte
 <script>
-  import { DailySkedWidget } from "dailysked";
-  import "dailysked/styles.css";
+  import { DAILY_SKED_LAYOUT_PRESETS, DailySkedCalendar } from 'dailysked';
+</script>
+
+<!-- Common SaaS shell -->
+<DailySkedCalendar layout={DAILY_SKED_LAYOUT_PRESETS.saasShell} />
+
+<!-- Strict container on both sides -->
+<DailySkedCalendar layout={DAILY_SKED_LAYOUT_PRESETS.strictContainer} />
+
+<!-- Full-bleed route with viewport gutter -->
+<DailySkedCalendar layout={DAILY_SKED_LAYOUT_PRESETS.fullBleedViewport} />
+
+<!-- Flex route outlet; opt in explicitly -->
+<DailySkedCalendar layout={DAILY_SKED_LAYOUT_PRESETS.flexParent} />
+```
+
+Integration note:
+
+- If your host shell has custom breakpoints, scroll containers, or dynamic width constraints, prefer `strictContainer` (or set `layout.sidebarBleed = 'container'`) to avoid sidebar geometry oscillation.
+
+## Widget
+
+DailySked also exports a compact dashboard widget based on the same Google data model.
+
+```svelte
+<script>
+  import { DailySkedWidget } from 'dailysked';
+  import 'dailysked/styles.css';
 </script>
 
 <DailySkedWidget
-  google={{
-    connected: Boolean(googleAccount),
-    connectHref: "/api/google/oauth/start",
-    syncEndpoint: "/api/google"
-  }}
+  calendars={data.calendars}
+  events={data.events}
+  tasks={data.tasks}
   range="week"
   scheduleHref="/schedule"
+  google={{
+    connected: Boolean(data.googleAccount),
+    connectHref: '/api/google/oauth/start',
+    syncEndpoint: '/api/google'
+  }}
 />
 ```
 
-## Workspace users
+## Workspace Users
 
-Apps can pass their own workspace users directly into the task view. DailySked normalizes them into assignable task members, so tasks can store a simple `assigneeId` while host apps keep the mapping to their own user records.
+Apps can pass workspace users into the task view. DailySked normalizes them into assignable task members, so tasks can store a simple `assigneeId` while host apps keep their own user records.
 
 ```svelte
 <DailySkedCalendar
@@ -212,19 +254,71 @@ Apps can pass their own workspace users directly into the task view. DailySked n
 />
 ```
 
-If an app already has DailySked-specific members, pass `teamMembers` too. Members with matching `externalUserId` are merged with `workspaceUsers`, which lets apps preserve local colors or names while still syncing against their own user IDs.
+If your app already stores DailySked members, pass `teamMembers` too. Matching members are merged by `externalUserId`.
 
-DailySked treats workspace users as read-only by default. Apps that want local team controls can opt in:
+## Token Storage
 
-```svelte
-<DailySkedCalendar
-  workspaceUsers={workspaceUsers}
-  teamManagement={{
-    allowAdd: false,
-    allowEdit: true,
-    allowDelete: false
-  }}
-/>
+The default token store uses httpOnly cookies so the demo and small prototypes work quickly. Production apps should usually provide a database-backed token store and encrypt refresh tokens at rest.
+
+```ts
+export const google = createDailySkedGoogleHandlers({
+  clientId: env.GOOGLE_CLIENT_ID,
+  clientSecret: env.GOOGLE_CLIENT_SECRET,
+  redirectUri: env.GOOGLE_REDIRECT_URI,
+  tokenStore: {
+    async load(event) {
+      return db.googleTokens.findByUserId(event.locals.user.id);
+    },
+    async save(event, session) {
+      await db.googleTokens.upsert(event.locals.user.id, session);
+    },
+    async delete(event) {
+      await db.googleTokens.deleteByUserId(event.locals.user.id);
+    }
+  }
+});
 ```
 
-This keeps the default integration path aligned with the host application's user directory, while still leaving room for products that want their own local team-member management UI.
+The `GoogleTokenStore` interface is exported from `dailysked/server`.
+
+## Client Helper
+
+`dailysked/client` exports a typed helper for the same endpoint contract used by the UI components:
+
+```ts
+import { createDailySkedGoogleClient } from 'dailysked/client';
+
+const google = createDailySkedGoogleClient({ endpoint: '/api/google' });
+const data = await google.sync();
+const savedEvent = await google.createEvent('primary', event);
+```
+
+## Local Development
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Useful checks:
+
+```bash
+pnpm check
+pnpm test
+pnpm build
+pnpm pack --dry-run
+```
+
+The local demo uses neutral sample events and tasks when no Google account is connected.
+
+## Product Stance
+
+- Google Calendar is the primary event source.
+- Google Tasks is the primary task source.
+- DailySked is a product surface, not a generic calendar protocol adapter.
+- iCal, CalDAV, Outlook, and other providers are intentionally out of scope for this phase.
+- Demo data is for local product previews and should not be treated as production data.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

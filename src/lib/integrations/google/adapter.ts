@@ -1,4 +1,4 @@
-import { GOOGLE_SYNC_SCOPES } from './scopes';
+import { GOOGLE_SYNC_SCOPES } from './scopes.js';
 import type { GoogleOAuthSession, GoogleSyncAdapterConfig } from './types';
 import type { ScheduleCalendar, ScheduleEvent, ScheduleTask, TaskList } from '$lib/schedule-ui/types';
 

@@ -4,7 +4,8 @@
 
 @layer tokens {
   :root {
-    --ds-bg: #f7f7f8;
+    --ds-bg: transparent;
+    --ds-sidebar-bg: transparent;
     --ds-panel: #ffffff;
     --ds-text: #18181b;
     --ds-muted: #71717a;
@@ -22,12 +23,29 @@
     --ds-shadow-modal: 0 16px 36px rgba(15, 23, 42, 0.12);
     --ds-font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --ds-panel-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    --ds-edge-gutter: 24px;
+    --ds-layout-max-width: 100%;
+    --ds-task-surface-offset: 12px;
   }
 }
 
 @layer reset {
   * { box-sizing: border-box; }
   button, input, select, textarea { font: inherit; color: inherit; }
+  /* Keep host app globals (e.g. h1/p/button rules) from restyling DailySked internals. */
+  .ds-app-shell,
+  .ds-widget {
+    font-family: var(--ds-font-sans);
+    color: var(--ds-text);
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  .ds-app-shell :where(h1, h2, h3, h4, h5, h6, p),
+  .ds-widget :where(h1, h2, h3, h4, h5, h6, p) {
+    margin: 0;
+    font: inherit;
+    color: inherit;
+  }
 }
 
 @layer layout {
@@ -45,7 +63,7 @@
     min-height: 0;
     block-size: 100%;
     min-block-size: 0;
-    background: #fff;
+    background: var(--ds-bg);
     overflow: hidden;
     font-family: var(--ds-font-sans);
     font-size: 13.5px;
@@ -55,6 +73,48 @@
 
   .ds-app-shell.no-sidebar {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ds-app-shell.sidebar-bleed {
+    width: calc(100% + var(--ds-sidebar-bleed, 0px));
+    max-width: calc(100% + var(--ds-sidebar-bleed, 0px));
+    margin-inline-start: calc(-1 * var(--ds-sidebar-bleed, 0px));
+    margin-inline-end: 0;
+    grid-template-columns: calc(250px + var(--ds-sidebar-bleed, 0px)) minmax(0, 1fr);
+  }
+
+  .ds-app-shell.sidebar-right.sidebar-bleed {
+    margin-inline-start: 0;
+    margin-inline-end: calc(-1 * var(--ds-sidebar-bleed, 0px));
+    grid-template-columns: minmax(0, 1fr) calc(250px + var(--ds-sidebar-bleed, 0px));
+  }
+
+  .ds-app-shell.layout-constrained {
+    width: min(100%, var(--ds-layout-max-width));
+    max-width: min(100%, var(--ds-layout-max-width));
+  }
+
+  .ds-app-shell.layout-constrained.align-center {
+    margin-inline: auto;
+  }
+
+  .ds-app-shell.layout-constrained.align-right {
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+  }
+
+  .ds-app-shell.sizing-flex-parent {
+    align-self: stretch;
+    height: auto;
+    block-size: auto;
+  }
+
+  .ds-app-shell.edge-spacer {
+    padding-inline-end: var(--ds-edge-gutter);
+  }
+
+  .ds-app-shell.sidebar-right {
+    grid-template-columns: minmax(0, 1fr) 250px;
   }
 
   /* The engine bridge is invisible — drag/select backend only */
@@ -80,11 +140,15 @@
     min-block-size: 0;
     display: flex;
     flex-direction: column;
-    background: #fff;
+    background: var(--ds-bg);
     overflow: hidden;
   }
 
   .ds-app-shell.no-sidebar .ds-main {
+    grid-column: 1;
+  }
+
+  .ds-app-shell.sidebar-right .ds-main {
     grid-column: 1;
   }
 
@@ -97,13 +161,13 @@
     min-height: 0;
     flex: 1;
     overflow: hidden;
-    background: #fff;
+    background: transparent;
   }
 
   .ds-google-connect-banner {
     position: absolute;
     z-index: 12;
-    top: 14px;
+    top: 78px;
     right: 16px;
     width: min(430px, calc(100% - 32px));
     min-height: 72px;
@@ -140,7 +204,7 @@
   .ds-google-connected-pill {
     position: absolute;
     z-index: 12;
-    top: 14px;
+    top: 78px;
     right: 16px;
     height: 34px;
     padding: 0 12px;
@@ -153,7 +217,7 @@
     color: #334155;
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.09);
     font-size: 12.5px;
-    font-weight: 560;
+    font-weight: 600;
   }
   .ds-google-connected-pill span {
     width: 8px;
@@ -165,7 +229,7 @@
   .ds-save-error {
     position: absolute;
     z-index: 13;
-    top: 58px;
+    top: 122px;
     right: 16px;
     width: min(430px, calc(100% - 32px));
     min-height: 40px;
@@ -180,7 +244,7 @@
     color: #991b1b;
     box-shadow: 0 12px 34px rgba(15, 23, 42, 0.1);
     font-size: 12.5px;
-    font-weight: 620;
+    font-weight: 600;
   }
 
   .ds-save-error button {
@@ -207,7 +271,7 @@
     height: 34px;
     min-width: 34px;
     border: 1px solid var(--ds-line-strong);
-    border-radius: 6px;
+    border-radius: 7px;
     background: #fff;
     color: #2f3742;
     display: inline-flex;
@@ -252,8 +316,12 @@
     grid-row: 1;
     display: flex;
     flex-direction: column;
-    background: var(--ds-bg);
+    background: var(--ds-sidebar-bg);
     overflow: hidden;
+  }
+
+  .ds-app-shell.sidebar-right .ds-sidebar {
+    grid-column: 2;
   }
 
   .ds-panel-actions {
@@ -269,7 +337,7 @@
     width: 34px;
     height: 34px;
     border: 0;
-    border-radius: 6px;
+    border-radius: 7px;
     background: transparent;
     color: inherit;
     display: grid;
@@ -297,7 +365,7 @@
     display: grid;
     place-items: center;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 7px;
   }
   .ds-mini-header button:hover { background: #eef2f5; }
   .ds-mini-weekdays,
@@ -453,7 +521,7 @@
     padding: 18px 10px 6px;
     color: #8a93a0;
     font-size: 11px;
-    font-weight: 720;
+    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -512,7 +580,7 @@
     min-height: 76px;
     display: grid;
     grid-template-columns: minmax(320px, 1fr) auto;
-    padding: 18px 18px 14px;
+    padding: 18px 0 14px 18px;
     align-items: center;
     gap: 16px;
     background: var(--ds-bg);
@@ -838,16 +906,27 @@
 }
 
 @layer tasks {
+  .ds-app-shell.task-mode .ds-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   .ds-task-view {
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: var(--ds-task-surface-offset);
     overflow: auto;
     display: block;
-    padding: 58px 72px 80px;
+    padding: 50px 72px 80px;
+    box-sizing: border-box;
     background: #fff;
   }
   .ds-task-surface {
-    width: min(900px, calc(100vw - 360px));
-    min-width: 620px;
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    padding: 0;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -1736,6 +1815,7 @@
  */
 @layer engine {
   .ds-engine-view {
+    position: relative;
     width: 100%;
     min-width: 0;
     inline-size: 100%;
@@ -1748,7 +1828,7 @@
     display: flex;
     flex-direction: column;
     font-family: inherit;
-    background: #fff;
+    background: transparent;
   }
 
   .ds-engine-view .ec {
@@ -1768,7 +1848,7 @@
     font-family: inherit;
     font-size: 12.5px;
     color: var(--ds-text);
-    --ec-bg-color: #fff;
+    --ec-bg-color: transparent;
     --ec-text-color: var(--ds-text);
     --ec-border-color: var(--ds-grid-boundary) !important;
     --ec-today-bg-color: transparent;
@@ -1791,19 +1871,38 @@
     border: 0 !important;
     border-top: 0;
     overflow: auto;
-    background: #fff;
+    background: transparent;
+  }
+
+  .ds-week-now-line {
+    position: absolute;
+    height: 2px;
+    background: var(--ec-now-indicator-color, #ef4444);
+    pointer-events: none;
+    z-index: 8;
+  }
+
+  .ds-week-now-line::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--ec-now-indicator-color, #ef4444);
+    top: -4px;
+    left: -5px;
   }
 
   .ds-engine-view .ec-header {
     flex: 0 0 auto;
-    background: #fff;
+    background: var(--ds-bg);
     border-bottom: 1px solid var(--ds-grid-boundary);
     z-index: 5;
     overflow: hidden;
   }
 
   .ds-engine-view .ec-sidebar {
-    background: #fff;
+    background: var(--ds-bg);
     color: var(--ds-muted);
     border-color: var(--ds-grid-boundary) !important;
     font-size: 12px;
@@ -1824,7 +1923,7 @@
   .ds-engine-view .ec-col-head,
   .ds-engine-view .ec-col-group {
     min-height: 54px;
-    background: #fff;
+    background: var(--ds-bg);
     color: var(--ds-muted);
     font-size: 11px;
     font-weight: 700;
@@ -1863,7 +1962,7 @@
     border-radius: 999px;
     color: var(--ds-text);
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1;
   }
 
@@ -1874,10 +1973,10 @@
 
   .ds-engine-view .ec-col-head.ec-today,
   .ds-engine-view .ec-col-group.ec-today {
-    --ec-day-bg-color: #fff !important;
+    --ec-day-bg-color: var(--ds-panel) !important;
     color: var(--ds-blue);
-    background: #fff !important;
-    background-color: #fff !important;
+    background: var(--ds-panel) !important;
+    background-color: var(--ds-panel) !important;
   }
 
   .ds-engine-view .ec-col-head.ec-today strong,
@@ -1890,7 +1989,7 @@
     background: var(--ds-blue);
     color: #fff;
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1;
   }
 
@@ -1939,22 +2038,17 @@
   }
 
   .ds-engine-view .ec-time-grid .ec-body .ec-sidebar {
-    background-image:
-      linear-gradient(to left, transparent 0, transparent 6px, #fff 6px),
-      repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent calc(var(--ec-slot-height, 31px) - 1px),
-        var(--ds-grid-minor) calc(var(--ec-slot-height, 31px) - 1px),
-        var(--ds-grid-minor) var(--ec-slot-height, 31px),
-        transparent var(--ec-slot-height, 31px),
-        transparent calc((var(--ec-slot-height, 31px) * 2) - 1px),
-        var(--ds-grid-major) calc((var(--ec-slot-height, 31px) * 2) - 1px),
-        var(--ds-grid-major) calc(var(--ec-slot-height, 31px) * 2)
-      ) !important;
-    background-size:
-      100% 100%,
-      100% calc(var(--ec-slot-height, 31px) * var(--ec-slot-label-periodicity, 2)) !important;
+    background-image: none !important;
+    background-color: #fff !important;
+  }
+
+  /* Keep the time-label gutter visually blank (no horizontal grid strokes). */
+  .ds-engine-view .ec-time-grid .ec-header .ec-sidebar,
+  .ds-engine-view .ec-all-day .ec-sidebar,
+  .ds-engine-view .ec-time-grid .ec-body .ec-sidebar,
+  .ds-engine-view .ec-time-grid .ec-body .ec-sidebar * {
+    border-top-color: transparent !important;
+    border-bottom-color: transparent !important;
   }
 
   .ds-engine-view .ec-slot {
@@ -2062,7 +2156,7 @@
     white-space: nowrap;
     color: color-mix(in srgb, var(--ds-event-color, #2563eb) 66%, #18181b);
     font-size: 11.5px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1;
   }
 
@@ -2090,15 +2184,162 @@
     box-shadow: inset 0 0 0 1px rgba(22, 135, 179, 0.24);
   }
 
-  .ds-engine-view .ec-now-indicator {
-    border-block-start-width: 1px;
-  }
-
-  .ds-engine-view .ec-now-indicator::before {
-    width: 8px;
-    height: 8px;
-    margin-block-start: -5px;
-    margin-inline-start: -5px;
-  }
 }
 
+/*
+ * Host-defense overrides (unlayered, integration contract):
+ * These selectors intentionally sit outside @layer to protect critical
+ * DailySked chrome from aggressive host globals.
+ */
+
+/* CTA/link hardening */
+.ds-google-connect-banner a,
+.ds-widget-connect-bar a {
+  background: var(--ds-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+.ds-google-connect-banner a:hover,
+.ds-widget-connect-bar a:hover {
+  background: var(--ds-blue-hover);
+  color: #fff;
+}
+
+/* Toolbar chrome hardening */
+.ds-header .ds-today-btn,
+.ds-header .ds-icon-btn {
+  height: 34px;
+  min-width: 34px;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: 7px;
+  background: #fff;
+  color: #2f3742;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.ds-header .ds-today-btn {
+  min-width: 64px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ds-header .ds-icon-btn.ds-nav-icon {
+  border-color: transparent;
+  background: transparent;
+}
+
+.ds-header .ds-today-btn:hover,
+.ds-header .ds-icon-btn:hover {
+  background: #eef0f2;
+}
+
+.ds-header .ds-icon-btn.ds-nav-icon:hover {
+  border-color: transparent;
+  background: #e8eaed;
+}
+
+.ds-header .ds-header-left h2 {
+  margin: 0 0 0 12px;
+  color: var(--ds-text);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 34px;
+  white-space: nowrap;
+}
+
+.ds-header .ds-mode-toggle {
+  display: inline-flex;
+  overflow: hidden;
+  height: 34px;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.ds-header .ds-mode-toggle button {
+  width: 40px;
+  height: 32px;
+  border: 0;
+  border-right: 1px solid var(--ds-line);
+  background: transparent;
+  color: #64707d;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.ds-header .ds-mode-toggle button:last-child {
+  border-right: 0;
+}
+
+.ds-header .ds-mode-toggle button.active {
+  background: var(--ds-blue-soft);
+  color: var(--ds-blue);
+}
+
+.ds-header .ds-mode-toggle button:hover:not(.active) {
+  background: #f0f2f4;
+}
+
+/* Calendar heading typography hardening */
+.ds-engine-view .ec-col-head strong,
+.ds-engine-view .ec-col-group strong,
+.ds-engine-view .ec-col-head.ec-today strong,
+.ds-engine-view .ec-col-group.ec-today strong {
+  font-weight: 500 !important;
+}
+
+/* Task workspace hardening */
+.ds-app-shell.task-mode .ds-content {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+}
+
+.ds-app-shell.task-mode .ds-task-view {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin-top: var(--ds-task-surface-offset) !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+  display: block !important;
+  overflow: auto !important;
+  padding: 50px 72px 80px !important;
+}
+
+.ds-app-shell.task-mode .ds-task-surface {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100% !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.ds-app-shell.task-mode .ds-task-header h2 {
+  margin: 0;
+  color: #202124;
+  font-size: 31px;
+  font-weight: 690;
+  letter-spacing: -0.03em;
+}
+
+.ds-app-shell.task-mode .ds-task-group-header {
+  color: #202124;
+  font-size: 17px;
+  font-weight: 720;
+}
+
+.ds-app-shell.task-mode .ds-task-row strong {
+  color: #202124;
+  font-size: 15.5px;
+  font-weight: 430;
+}

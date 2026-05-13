@@ -145,13 +145,13 @@ export const google = createDailySkedGoogleHandlers({
 	clientSecret: env.GOOGLE_CLIENT_SECRET,
 	redirectUri: env.GOOGLE_REDIRECT_URI,
 	tokenStore: {
-		async load({ event }) {
+		async load(event) {
 			return db.googleTokens.findByUserId(event.locals.user.id);
 		},
-		async save({ event }, session) {
+		async save(event, session) {
 			await db.googleTokens.upsert(event.locals.user.id, session);
 		},
-		async delete({ event }) {
+		async delete(event) {
 			await db.googleTokens.deleteByUserId(event.locals.user.id);
 		}
 	}

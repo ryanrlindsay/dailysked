@@ -2,7 +2,33 @@ export type ScheduleView = 'timeGridDay' | 'timeGridWeek' | 'dayGridMonth' | 'da
 export type AppMode = 'calendar' | 'tasks';
 export type TaskNavView = 'inbox' | 'today' | 'upcoming' | 'list' | 'member';
 export type WidgetRange = 'today' | 'week' | 'upcoming';
+export type SidebarPosition = 'left' | 'right';
+export type LayoutMode = 'auto' | 'container' | 'viewport';
+export type ContentAlign = 'left' | 'center' | 'right';
+export type LayoutLength = number | string;
+export type SidebarBleedMode = 'auto' | 'container';
+export type LayoutSizing = 'host-box' | 'flex-parent';
 export type MaybePromise<T> = T | Promise<T>;
+export type DailySkedTheme = Record<`--ds-${string}`, string | number>;
+
+export interface DailySkedLayoutOptionsBase {
+  /**
+   * `host-box` (default) fills the explicit host box with height: 100%.
+   * `flex-parent` opts into flex-parent stretch semantics for app shells
+   * whose route outlet controls height via flex growth.
+   */
+  sizing?: LayoutSizing;
+  sidebarBleed?: SidebarBleedMode;
+  maxWidth?: LayoutLength;
+  align?: ContentAlign;
+  edgeGutter?: LayoutLength;
+  desktopBreakpoint?: number;
+}
+
+export type DailySkedLayoutOptions =
+  | ({ mode?: 'auto' } & DailySkedLayoutOptionsBase)
+  | ({ mode: 'container' } & DailySkedLayoutOptionsBase)
+  | ({ mode: 'viewport' } & DailySkedLayoutOptionsBase);
 
 export interface ScheduleCalendar {
   id: string;
@@ -108,18 +134,10 @@ export interface DraftSelection {
 export interface GoogleConfig {
   connected: boolean;
   email?: string;
-  /** Google Calendar ID to write new events to. Defaults to 'primary'. */
   primaryCalendarId?: string;
   connectHref?: string;
   disconnectHref?: string;
-  /**
-   * Base URL of your Google sync API (e.g. '/api/google').
-   * When set, the component auto-wires all mutation handlers to call
-   * POST/PUT/DELETE {syncEndpoint}/events and {syncEndpoint}/tasks.
-   * Individual event and task handler props override this when provided.
-   */
   syncEndpoint?: string;
-  /** Set to false to allow edits without a Google connection. Defaults to true. */
   requireConnection?: boolean;
 }
 
@@ -133,4 +151,53 @@ export interface DailySkedCalendarHandlers {
   onTaskUpdate?: (task: ScheduleTask) => MaybePromise<ScheduleTask | void>;
   onTaskListCreate?: (list: TaskList) => MaybePromise<TaskList | void>;
   onTeamMemberCreate?: (member: TeamMember) => MaybePromise<TeamMember | void>;
+}
+
+export interface DailySkedCalendarLegacyLayoutProps {
+  /** @deprecated Use layout.sidebarBleed */
+  sidebarBleedMode?: SidebarBleedMode;
+  /** @deprecated Use layout.mode */
+  layoutMode?: LayoutMode;
+  /** @deprecated Use layout.maxWidth */
+  maxContentWidth?: LayoutLength;
+  /** @deprecated Use layout.align */
+  contentAlign?: ContentAlign;
+  /** @deprecated Use layout.edgeGutter */
+  edgeGutter?: LayoutLength;
+}
+
+export interface DailySkedCalendarProps extends DailySkedCalendarHandlers, DailySkedCalendarLegacyLayoutProps {
+  initialDate?: Date;
+  initialMode?: AppMode;
+  initialView?: ScheduleView;
+  events?: ScheduleEvent[];
+  calendars?: ScheduleCalendar[];
+  tasks?: ScheduleTask[];
+  taskLists?: TaskList[];
+  teamMembers?: TeamMember[];
+  workspaceUsers?: WorkspaceUser[];
+  teamManagement?: TeamManagementOptions;
+  initialTaskListId?: string;
+  google?: GoogleConfig;
+  sidebar?: boolean;
+  layout?: DailySkedLayoutOptions;
+  sidebarPosition?: SidebarPosition;
+  dayHover?: boolean;
+  showMiniCalendarEventDots?: boolean;
+  theme?: DailySkedTheme;
+}
+
+export interface DailySkedWidgetProps {
+  events?: ScheduleEvent[];
+  tasks?: ScheduleTask[];
+  calendars?: ScheduleCalendar[];
+  google?: GoogleConfig;
+  range?: WidgetRange;
+  scheduleHref?: string;
+  loading?: boolean;
+  error?: string;
+  emptyContent?: string;
+  dayHover?: boolean;
+  theme?: DailySkedTheme;
+  onOpenEvent?: (event: ScheduleEvent) => void;
 }

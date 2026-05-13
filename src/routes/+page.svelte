@@ -35,7 +35,7 @@
       DailySked
     </a>
     <nav aria-label="Primary">
-      <a href="https://github.com/ryanrlindsay?tab=repositories" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://github.com/dailysked/dailysked" target="_blank" rel="noopener noreferrer">GitHub</a>
     </nav>
   </header>
 

@@ -27,4 +27,5 @@ vite.config.ts.timestamp-*
 .claude/
 .playwright-mcp/
 *.png
+!docs/assets/dailysked-demo.png
 ENGINE_WRAPPER_RESTORE_NOTES.md
