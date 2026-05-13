@@ -1,0 +1,10 @@
+DailySked
+Copyright (c) 2026 DailySked contributors
+
+---
+
+This software includes the following third-party components:
+
+@event-calendar/core (https://github.com/vkurko/calendar)
+Licensed under the MIT License
+Copyright (c) vkurko

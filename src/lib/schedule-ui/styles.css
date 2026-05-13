@@ -1,0 +1,2334 @@
+@import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap");
+@import '@event-calendar/core/index.css' layer(engine-base);
+@layer reset, tokens, layout, sidebar, header, month, week, year, tasks, editor, command, dialogs, datepicker, responsive, engine-base, engine;
+
+@layer tokens {
+  :root {
+    --ds-bg: transparent;
+    --ds-sidebar-bg: transparent;
+    --ds-panel: #ffffff;
+    --ds-text: #18181b;
+    --ds-muted: #71717a;
+    --ds-subtle: #a1a1aa;
+    --ds-line: hsl(0 0% 89.8% / 0.78);
+    --ds-line-strong: hsl(0 0% 89.8%);
+    --ds-blue: #2286b0;
+    --ds-blue-hover: #1d759b;
+    --ds-blue-soft: #e8f5fc;
+    --ds-blue-line: color-mix(in srgb, var(--ds-blue) 28%, hsl(0 0% 89.8%));
+    --ds-day-selected-bg: var(--ds-blue-soft);
+    --ds-day-selected-color: var(--ds-blue);
+    --ds-day-selected-ring: var(--ds-blue-line);
+    --ds-red: #ff5b5b;
+    --ds-shadow-modal: 0 16px 36px rgba(15, 23, 42, 0.12);
+    --ds-font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ds-panel-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    --ds-edge-gutter: 24px;
+    --ds-layout-max-width: 100%;
+    --ds-task-surface-offset: 12px;
+  }
+}
+
+@layer reset {
+  * { box-sizing: border-box; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  /* Keep host app globals (e.g. h1/p/button rules) from restyling DailySked internals. */
+  .ds-app-shell,
+  .ds-widget {
+    font-family: var(--ds-font-sans);
+    color: var(--ds-text);
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  .ds-app-shell :where(h1, h2, h3, h4, h5, h6, p),
+  .ds-widget :where(h1, h2, h3, h4, h5, h6, p) {
+    margin: 0;
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer layout {
+  .ds-app-shell,
+  .ds-app-shell.task-mode {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    height: 100%;
+    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
+    background: var(--ds-bg);
+    overflow: hidden;
+    font-family: var(--ds-font-sans);
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--ds-text);
+  }
+
+  .ds-app-shell.no-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ds-app-shell.sidebar-bleed {
+    width: calc(100% + var(--ds-sidebar-bleed, 0px));
+    max-width: calc(100% + var(--ds-sidebar-bleed, 0px));
+    margin-inline-start: calc(-1 * var(--ds-sidebar-bleed, 0px));
+    margin-inline-end: 0;
+    grid-template-columns: calc(250px + var(--ds-sidebar-bleed, 0px)) minmax(0, 1fr);
+  }
+
+  .ds-app-shell.sidebar-right.sidebar-bleed {
+    margin-inline-start: 0;
+    margin-inline-end: calc(-1 * var(--ds-sidebar-bleed, 0px));
+    grid-template-columns: minmax(0, 1fr) calc(250px + var(--ds-sidebar-bleed, 0px));
+  }
+
+  .ds-app-shell.layout-constrained {
+    width: min(100%, var(--ds-layout-max-width));
+    max-width: min(100%, var(--ds-layout-max-width));
+  }
+
+  .ds-app-shell.layout-constrained.align-center {
+    margin-inline: auto;
+  }
+
+  .ds-app-shell.layout-constrained.align-right {
+    margin-inline-start: auto;
+    margin-inline-end: 0;
+  }
+
+  .ds-app-shell.sizing-flex-parent {
+    align-self: stretch;
+    height: auto;
+    block-size: auto;
+  }
+
+  .ds-app-shell.edge-spacer {
+    padding-inline-end: var(--ds-edge-gutter);
+  }
+
+  .ds-app-shell.sidebar-right {
+    grid-template-columns: minmax(0, 1fr) 250px;
+  }
+
+  /* The engine bridge is invisible — drag/select backend only */
+  .ds-engine-bridge {
+    position: fixed;
+    inset: auto 0 0 auto;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ds-main {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    inline-size: 100%;
+    min-inline-size: 0;
+    height: 100%;
+    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--ds-bg);
+    overflow: hidden;
+  }
+
+  .ds-app-shell.no-sidebar .ds-main {
+    grid-column: 1;
+  }
+
+  .ds-app-shell.sidebar-right .ds-main {
+    grid-column: 1;
+  }
+
+  .ds-content {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  .ds-google-connect-banner {
+    position: absolute;
+    z-index: 12;
+    top: 78px;
+    right: 16px;
+    width: min(430px, calc(100% - 32px));
+    min-height: 72px;
+    padding: 14px 14px 14px 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--ds-blue-line);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+  }
+  .ds-google-connect-banner div { min-width: 0; display: grid; gap: 3px; }
+  .ds-google-connect-banner strong { font-size: 13.5px; font-weight: 700; color: var(--ds-text); }
+  .ds-google-connect-banner span { font-size: 12px; line-height: 1.35; color: var(--ds-muted); }
+  .ds-google-connect-banner a {
+    height: 36px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: var(--ds-blue);
+    color: #fff;
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .ds-google-connect-banner a:hover { background: var(--ds-blue-hover); }
+
+  .ds-google-connected-pill {
+    position: absolute;
+    z-index: 12;
+    top: 78px;
+    right: 16px;
+    height: 34px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(15, 159, 110, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #334155;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.09);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .ds-google-connected-pill span {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #0f9f6e;
+  }
+
+  .ds-save-error {
+    position: absolute;
+    z-index: 13;
+    top: 122px;
+    right: 16px;
+    width: min(430px, calc(100% - 32px));
+    min-height: 40px;
+    padding: 10px 10px 10px 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 28px;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(185, 28, 28, 0.18);
+    border-radius: 8px;
+    background: rgba(254, 242, 242, 0.96);
+    color: #991b1b;
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.1);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .ds-save-error button {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .ds-save-error button:hover {
+    background: rgba(185, 28, 28, 0.08);
+  }
+
+  /* shared icon button */
+  .ds-icon-btn,
+  .ds-today-btn {
+    height: 34px;
+    min-width: 34px;
+    border: 1px solid var(--ds-line-strong);
+    border-radius: 7px;
+    background: #fff;
+    color: #2f3742;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .ds-today-btn { min-width: 64px; padding: 0 14px; font-size: 13px; font-weight: 500; }
+  .ds-icon-btn:hover,
+  .ds-today-btn:hover { background: #eef0f2; }
+  .ds-nav-icon { border-color: transparent; background: transparent; }
+  .ds-nav-icon:hover { background: #e8eaed; border-color: transparent; }
+
+  .ds-mode-toggle {
+    display: inline-flex;
+    overflow: hidden;
+    height: 34px;
+    border: 1px solid var(--ds-line-strong);
+    border-radius: 7px;
+    background: #fff;
+  }
+  .ds-mode-toggle button {
+    width: 40px;
+    height: 32px;
+    border: 0;
+    border-right: 1px solid var(--ds-line);
+    background: transparent;
+    color: #64707d;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .ds-mode-toggle button:last-child { border-right: 0; }
+  .ds-mode-toggle button.active { background: #eef8ff; color: #0d83b0; }
+  .ds-mode-toggle button:hover:not(.active) { background: #f0f2f4; }
+}
+
+@layer sidebar {
+  .ds-sidebar {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--ds-sidebar-bg);
+    overflow: hidden;
+  }
+
+  .ds-app-shell.sidebar-right .ds-sidebar {
+    grid-column: 2;
+  }
+
+  .ds-panel-actions {
+    height: 84px;
+    padding: 28px 22px 16px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 14px;
+    color: #6c727c;
+  }
+  .ds-panel-actions button {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: inherit;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .ds-panel-actions button:hover { background: #f1f5f8; color: var(--ds-text); }
+  .ds-panel-actions + .ds-mini-section { padding-top: 4px; }
+
+  /* mini calendar */
+  .ds-mini-section { padding: 4px 20px 24px; }
+  .ds-mini-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .ds-mini-header strong { font-size: 13.5px; font-weight: 700; color: var(--ds-text); }
+  .ds-mini-header button {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border-radius: 7px;
+  }
+  .ds-mini-header button:hover { background: #eef2f5; }
+  .ds-mini-weekdays,
+  .ds-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+  .ds-mini-grid {
+    overflow: hidden;
+  }
+  .ds-mini-weekdays span {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ds-muted);
+    padding: 4px 0 8px;
+  }
+  .ds-mini-grid button {
+    position: relative;
+    inline-size: 100%;
+    min-inline-size: 0;
+    height: 31px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ds-text);
+    cursor: pointer;
+  }
+  .ds-mini-grid button span {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+  }
+  .ds-mini-grid button.outside { color: #9ca3af; }
+  .ds-mini-grid button:hover { background: transparent; }
+  .day-hover .ds-mini-grid button:not(.selected):hover span { background: #f1f5f8; }
+  .ds-mini-grid button.today span { background: var(--ds-blue); color: #fff; }
+  .ds-mini-grid button.selected:not(.today) span { background: var(--ds-day-selected-bg); color: var(--ds-day-selected-color); box-shadow: inset 0 0 0 1.5px var(--ds-day-selected-ring); }
+  .ds-mini-grid i { position: absolute; bottom: 2px; width: 3px; height: 3px; border-radius: 50%; background: var(--ds-blue); }
+
+  /* calendar list */
+  .ds-sidebar-section { padding: 18px 16px 22px; display: flex; flex-direction: column; gap: 12px; }
+  .ds-sidebar-title-row { display: flex; align-items: center; justify-content: space-between; height: 28px; }
+  .ds-sidebar-title { font-size: 11px; letter-spacing: 0.08em; font-weight: 700; color: var(--ds-muted); text-transform: uppercase; }
+  .ds-calendar-add {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #5f6368;
+    display: inline-grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .ds-calendar-add:hover { background: #f1f5f8; color: var(--ds-text); }
+  .ds-calendar-list { display: grid; gap: 6px; }
+  .ds-calendar-row {
+    min-height: 33px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 3px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ds-calendar-row:hover { background: #f1f5f8; }
+  .ds-calendar-row.muted { opacity: 0.42; }
+  .ds-calendar-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    background: var(--ds-calendar-color);
+    display: grid;
+    place-items: center;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    flex: 0 0 auto;
+  }
+  .ds-calendar-name { font-size: 13.5px; color: var(--ds-text); font-weight: 600; }
+
+  .ds-task-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 10px 18px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .ds-task-nav-item {
+    width: 100%;
+    height: 36px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 13.5px;
+    margin: 1px 0;
+    position: relative;
+  }
+  .ds-task-nav-item > svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: #6b7280;
+    stroke-width: 2;
+  }
+  .ds-task-nav-item > span:not(.ds-member-sidebar-dot) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ds-task-nav-item small {
+    flex: 0 0 auto;
+    font-size: 12px;
+    color: #6b7280;
+    margin-left: auto;
+  }
+  .ds-task-nav-item:hover { background: #f1f5f8; color: var(--ds-text); }
+  .ds-task-nav-item.active { background: var(--ds-blue-soft); color: var(--ds-text); font-weight: 700; }
+  .ds-task-nav-item.active > svg { color: var(--ds-blue); }
+  .ds-task-nav-item.active small { color: var(--ds-blue); }
+  .ds-task-nav-item.list-item { padding-left: 10px; }
+  .ds-task-nav-item.create-list { color: #6b7280; font-size: 13.5px; }
+  .ds-task-nav-item.create-list:hover { color: #202124; }
+
+  .ds-task-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 10px 6px;
+    color: #8a93a0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ds-task-section-header span { flex: 1; }
+  .ds-section-toggle {
+    width: 22px;
+    height: 22px;
+    border: 0;
+    background: transparent;
+    color: #9aa0a6;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+  }
+  .ds-section-toggle:hover { background: #eef2f5; color: #5f6368; }
+
+  .ds-task-list-items,
+  .ds-team-items { display: flex; flex-direction: column; }
+
+  .ds-member-sidebar-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 18px;
+    color: color-mix(in srgb, var(--ds-member-color) 78%, #111827);
+    background: color-mix(in srgb, var(--ds-member-color) 12%, white);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-member-color) 50%, transparent);
+  }
+
+  .ds-member-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--ds-member-color, #6b7280);
+    flex: 0 0 auto;
+  }
+
+  /* legacy – keep for any residual refs */
+  .ds-list-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    background: #4b5563;
+    color: #fff;
+  }
+}
+
+@layer header {
+  .ds-header {
+    height: 76px;
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) auto;
+    padding: 18px 0 14px 18px;
+    align-items: center;
+    gap: 16px;
+    background: var(--ds-bg);
+  }
+  .ds-header-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ds-header-left h2 {
+    margin: 0 0 0 12px;
+    color: var(--ds-text);
+    font-size: 18px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 34px;
+    white-space: nowrap;
+  }
+  .ds-header-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .ds-header-left-empty { min-height: 36px; }
+
+  .ds-settings-btn { color: #475569; }
+  .ds-settings-btn:hover { color: var(--ds-text); }
+}
+
+@layer month {
+  .ds-month-view {
+    height: 100%;
+    display: grid;
+    grid-template-rows: 42px minmax(0, 1fr);
+  }
+  .ds-month-weekdays {
+    display: grid;
+    grid-template-columns: 36px repeat(7, 1fr);
+    border-bottom: 1px solid var(--ds-line);
+  }
+  .ds-month-weekdays div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ds-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .ds-month-weekdays .ds-week-gutter { justify-content: center; }
+  .ds-month-grid {
+    display: grid;
+    grid-template-columns: 36px repeat(7, minmax(0, 1fr));
+    grid-template-rows: repeat(6, minmax(116px, 1fr));
+  }
+  .ds-week-number {
+    border-right: 1px solid var(--ds-line);
+    border-bottom: 1px solid var(--ds-line);
+    padding-top: 34px;
+    text-align: center;
+    color: #9aa4b2;
+    font-size: 10px;
+  }
+  .ds-month-cell {
+    position: relative;
+    min-width: 0;
+    padding: 10px 6px 5px;
+    border-right: 1px solid var(--ds-line);
+    border-bottom: 1px solid var(--ds-line);
+    background: #fff;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .ds-month-cell.outside { color: #94a3b8; }
+  .ds-month-cell.dragging { background: rgba(26, 115, 232, 0.06); }
+  .ds-month-cell:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.42); outline-offset: -2px; }
+  .ds-day-number {
+    height: 34px;
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    padding-top: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ds-text);
+  }
+  .ds-day-number i { display: none; }
+  .ds-month-cell.today .ds-day-number span {
+    display: grid;
+    place-items: center;
+    width: 31px;
+    height: 31px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: var(--ds-blue);
+    color: #fff;
+  }
+  .ds-day-events { display: grid; gap: 2px; margin-top: 4px; }
+  .ds-event {
+    width: 100%;
+    min-width: 0;
+    height: 17px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 0;
+    border-left: 3px solid var(--ds-event-color);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--ds-event-color) 16%, white);
+    color: color-mix(in srgb, var(--ds-event-color) 74%, #0f172a);
+    text-align: left;
+    cursor: pointer;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .ds-event:hover { filter: brightness(0.98); }
+  .ds-event.draft { outline: 1px dashed color-mix(in srgb, var(--ds-event-color) 65%, transparent); background: color-mix(in srgb, var(--ds-event-color) 22%, white); }
+  .ds-event-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+  .ds-event-time { flex: 0 0 auto; font-size: 10.5px; opacity: 0.9; }
+  .ds-more {
+    height: 16px;
+    border: 0;
+    background: transparent;
+    color: #475569;
+    text-align: left;
+    font-size: 11px;
+    padding: 0 4px;
+    cursor: pointer;
+  }
+  .ds-more:hover { text-decoration: underline; }
+}
+
+@layer week {
+  .ds-week-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ds-week-header {
+    display: grid;
+    border-bottom: 1px solid var(--ds-line);
+    background: #fff;
+    flex: 0 0 auto;
+  }
+  .ds-week-header > div,
+  .ds-week-header button {
+    height: 74px;
+    border: 0;
+    border-right: 1px solid var(--ds-line);
+    background: #fff;
+    display: grid;
+    place-items: center;
+    gap: 1px;
+    cursor: pointer;
+  }
+  .ds-week-header button:hover { background: #f8fbff; }
+  .ds-week-header span { font-size: 11px; color: #70757a; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; }
+  .ds-week-header strong { display: grid; place-items: center; font-size: 26px; font-weight: 400; color: #3c4043; }
+  .ds-week-header button.today strong { width: 40px; height: 40px; border-radius: 999px; background: var(--ds-blue); color: #fff; font-weight: 500; }
+
+  /* all-day strip */
+  .ds-allday-strip {
+    display: grid;
+    border-bottom: 1px solid var(--ds-line);
+    background: #fff;
+    flex: 0 0 auto;
+  }
+  .ds-allday-gutter {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 4px 6px 0 0;
+    border-right: 1px solid var(--ds-line);
+    min-height: 28px;
+  }
+  .ds-allday-gutter span {
+    font-size: 9px;
+    color: #9aa0a6;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .ds-allday-cell {
+    padding: 3px 2px;
+    border-right: 1px solid var(--ds-line);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 28px;
+  }
+  .ds-allday-event {
+    width: 100%;
+    height: 18px;
+    padding: 0 5px;
+    border: 0;
+    border-left: 3px solid var(--ds-event-color);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--ds-event-color) 16%, white);
+    color: color-mix(in srgb, var(--ds-event-color) 74%, #0f172a);
+    font-size: 11px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ds-allday-event:hover { filter: brightness(0.97); }
+  .ds-allday-event.draft { outline: 1px dashed color-mix(in srgb, var(--ds-event-color) 65%, transparent); }
+
+  .ds-time-grid {
+    display: grid;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    align-content: start;
+  }
+  .ds-time-label {
+    min-height: 52px;
+    border-right: 1px solid var(--ds-line);
+    border-bottom: 1px solid var(--ds-line);
+    color: #70757a;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-align: right;
+    padding: 6px 8px 0 0;
+  }
+  .ds-time-cell {
+    position: relative;
+    min-height: 52px;
+    border-right: 1px solid var(--ds-line);
+    border-bottom: 1px solid var(--ds-line);
+    padding: 0;
+    cursor: pointer;
+    background: #fff;
+  }
+  .ds-time-cell:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.42); outline-offset: -2px; }
+  .ds-half-hour-line {
+    display: none;
+  }
+  .ds-time-event {
+    position: absolute;
+    --ds-event-lane-gap: 4px;
+    left: calc(4px + (((100% - 8px) + var(--ds-event-lane-gap)) / var(--ds-event-lanes, 1) * var(--ds-event-lane, 0)));
+    width: calc((((100% - 8px) + var(--ds-event-lane-gap)) / var(--ds-event-lanes, 1)) - var(--ds-event-lane-gap));
+    top: calc(var(--ds-event-top, 0%) + 3px);
+    min-height: 26px;
+    z-index: 2;
+    border: 0;
+    border-left: 3px solid var(--ds-event-color);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--ds-event-color) 14%, white);
+    padding: 5px 7px;
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ds-time-event strong { color: color-mix(in srgb, var(--ds-event-color) 70%, #0f172a); font-size: 12px; line-height: 1.1; }
+  .ds-time-event span { font-size: 10px; color: #64748b; }
+  .ds-time-event.draft { outline: 1px dashed color-mix(in srgb, var(--ds-event-color) 65%, transparent); background: color-mix(in srgb, var(--ds-event-color) 22%, white); }
+}
+
+@layer year {
+  .ds-year-view {
+    height: 100%;
+    overflow: auto;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(190px, 1fr));
+    gap: 22px 26px;
+    padding: 26px 32px 34px;
+    background: #fff;
+  }
+  .ds-year-month { min-width: 0; }
+  .ds-year-month-title {
+    border: 0;
+    background: transparent;
+    padding: 0 0 9px;
+    color: #1f2937;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: left;
+  }
+  .ds-year-month-title:hover { color: var(--ds-blue); }
+  .ds-year-weekdays,
+  .ds-year-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .ds-year-weekdays span {
+    height: 22px;
+    display: grid;
+    place-items: center;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 750;
+  }
+  .ds-year-grid button {
+    position: relative;
+    height: 27px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #1f2937;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .ds-year-grid button:hover { background: #f1f5f9; }
+  .ds-year-grid button.outside { color: #cbd5e1; }
+  .ds-year-grid button.today span {
+    display: inline-grid;
+    place-items: center;
+    width: 23px;
+    height: 23px;
+    border-radius: 999px;
+    background: var(--ds-blue);
+    color: #fff;
+  }
+  .ds-year-grid button.has-events i {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 3px;
+    height: 3px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: var(--ds-blue);
+  }
+}
+
+@layer tasks {
+  .ds-app-shell.task-mode .ds-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .ds-task-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: var(--ds-task-surface-offset);
+    overflow: auto;
+    display: block;
+    padding: 50px 72px 80px;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .ds-task-surface {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .ds-task-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 30px;
+  }
+  .ds-task-header h2 {
+    margin: 0;
+    color: #202124;
+    font-size: 31px;
+    font-weight: 690;
+    letter-spacing: -0.03em;
+  }
+
+  .ds-task-group {
+    margin-bottom: 32px;
+  }
+  .ds-task-group.empty { margin-top: -12px; }
+
+  .ds-add-task-outer {
+    margin: 6px 0 10px;
+    cursor: text;
+  }
+  .ds-add-task-outer.expanded {
+    border: 1px solid #e0e6ee;
+    border-radius: 4px;
+    padding: 10px 13px 12px;
+    background: #eef4fb;
+    box-shadow: none;
+    margin: 8px 0 10px;
+    cursor: default;
+  }
+  .ds-add-task-row {
+    min-height: 36px;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) 28px;
+    gap: 10px;
+    align-items: center;
+    padding: 0;
+    color: #6b7280;
+  }
+  .ds-add-task-outer.expanded .ds-add-task-row { padding-bottom: 0; }
+  .ds-add-task-row input {
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #202124;
+    font-size: 18px;
+    line-height: 1.35;
+  }
+  .ds-add-task-row input::placeholder { color: #6b7280; opacity: 1; }
+  .ds-draft-close {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #8b95a1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .ds-draft-close:hover { background: #e7edf5; color: #334155; }
+
+  .ds-task-group-header {
+    padding: 0 0 10px;
+    color: #202124;
+    font-size: 17px;
+    font-weight: 720;
+    letter-spacing: -0.01em;
+    border-bottom: 1px solid rgba(32, 33, 36, 0.09);
+    margin-bottom: 0;
+  }
+
+  .ds-completed-rows { padding-top: 4px; }
+
+  .ds-task-row-wrap {
+    border-radius: 4px;
+    margin: 0;
+    border-bottom: 1px solid rgba(32, 33, 36, 0.075);
+    cursor: pointer;
+  }
+  .ds-task-row-wrap:hover { background: #fbfdff; }
+  .ds-task-row-wrap.selected {
+    background: #eef4fb;
+    border-bottom-color: transparent;
+    box-shadow: none;
+  }
+
+  .ds-task-row {
+    min-height: 54px;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 30px;
+    gap: 8px;
+    align-items: center;
+    padding: 9px 10px 8px;
+  }
+  .ds-task-row strong { display: block; color: #202124; font-size: 15.5px; font-weight: 430; line-height: 1.35; }
+
+  /* assignee-colored circle */
+  .ds-task-circle {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 2px solid #c4c9cf;
+    background: transparent;
+    cursor: pointer;
+    flex: 0 0 auto;
+    transition: border-color 0.1s, background 0.1s;
+    padding: 0;
+  }
+  .ds-task-circle.assigned {
+    border-color: var(--ds-assignee-color);
+    box-shadow: none;
+  }
+  .ds-task-circle:hover { border-color: #0b57d0; }
+  .ds-task-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    border: 0;
+    background: #0b57d0;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  /* task metadata line */
+  .ds-task-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .ds-meta-icon { display: flex; align-items: center; color: #9ca3af; }
+  .ds-meta-icon.recurring { color: #0f9f6e; }
+  .ds-meta-due {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: #8a93a0;
+  }
+  .ds-meta-due.today-due { color: #8a93a0; }
+  .ds-meta-cal {
+    font-size: 12px;
+    color: #7b8490;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .ds-task-menu-wrap { position: relative; display: grid; place-items: center; }
+  .ds-task-menu {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    display: grid;
+    place-items: center;
+    color: #727b86;
+    cursor: pointer;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .ds-task-row-wrap:hover .ds-task-menu,
+  .ds-task-row-wrap.selected .ds-task-menu { opacity: 1; }
+  .ds-task-menu:hover { background: #f1f5f9; color: #374151; }
+
+  /* expanded task detail panel */
+  .ds-task-expanded {
+    padding: 0 18px 14px 47px;
+  }
+  .ds-task-details-row {
+    margin-bottom: 10px;
+  }
+  .ds-task-details-input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #4b5563;
+    font-size: 15px;
+    padding: 0;
+  }
+  .ds-task-details-input::placeholder { color: #9ca3af; }
+  .ds-task-details-input:focus { color: #202124; }
+
+  /* schedule pills row */
+  .ds-task-schedule-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .ds-task-pills {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ds-pill {
+    height: 31px;
+    padding: 0 14px;
+    border: 1px solid rgba(32, 33, 36, 0.18);
+    border-radius: 999px;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 520;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+  }
+  .ds-pill:hover { background: #f1f5f9; border-color: #94a3b8; }
+  .ds-pill.active { background: #e8f4fd; border-color: #7ec8f0; color: #0b57d0; font-weight: 600; }
+  .ds-pill-clear {
+    color: #64748b;
+    background: transparent;
+  }
+  .ds-pill-icon {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+  .ds-task-schedule-right { display: flex; align-items: center; }
+  .ds-pill-icon-ghost {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    background: transparent;
+    color: #9ca3af;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border-radius: 999px;
+  }
+  .ds-pill-icon-ghost:hover { background: #f1f5f9; color: #374151; }
+  .ds-pill-icon-ghost.active {
+    background: #e8f7ef;
+    color: #0f9f6e;
+  }
+  .ds-draft-due {
+    color: #64748b;
+    font-size: 12px;
+    padding-left: 2px;
+  }
+
+  .ds-assignee-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 0 0;
+  }
+  .ds-assignee-strip.compact {
+    max-width: 100%;
+  }
+  .ds-assignee-strip button {
+    max-width: 150px;
+    height: 28px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 9px 0 5px;
+    cursor: pointer;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ds-assignee-strip button:hover { background: #f8fafc; border-color: var(--ds-line); color: #334155; }
+  .ds-assignee-strip button.active { background: #fff; border-color: #bfdbfe; color: #0b57d0; }
+  .ds-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ds-member-color) 16%, white);
+    color: color-mix(in srgb, var(--ds-member-color) 74%, #0f172a);
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    font-size: 9.5px;
+    font-weight: 760;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1.5px var(--ds-member-color);
+  }
+  .ds-avatar.neutral {
+    background: #f8fafc;
+    color: #94a3b8;
+    box-shadow: inset 0 0 0 1.5px #cbd5e1;
+  }
+  .ds-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ds-inline-add {
+    width: 100%;
+    min-height: 44px;
+    border: 0;
+    border-bottom: 1px solid rgba(32, 33, 36, 0.075);
+    background: transparent;
+    color: #737b86;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 0 0 0 6px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 15px;
+  }
+  .ds-inline-add svg { color: #8a93a0; }
+  .ds-inline-add:hover { color: #202124; background: #fbfdff; }
+  .ds-inline-add:hover svg { color: #202124; }
+  .ds-inline-add.first { border-top: 1px solid rgba(32, 33, 36, 0.075); }
+
+  /* popover */
+  .ds-task-list-popover {
+    position: absolute;
+    right: 0;
+    top: 30px;
+    z-index: 20;
+    width: 220px;
+    padding: 10px;
+    border: 1px solid var(--ds-line-strong);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14);
+  }
+  .ds-task-list-popover > span { display: block; padding: 0 4px 8px; color: #64748b; font-size: 12px; font-weight: 650; }
+  .ds-task-list-popover-grid,
+  .ds-task-assignee-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .ds-task-list-popover-grid button,
+  .ds-task-assignee-grid button {
+    min-height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #202124;
+    cursor: pointer;
+    padding: 5px 8px;
+    font-size: 12.5px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ds-task-list-popover-grid button:hover,
+  .ds-task-list-popover-grid button.active,
+  .ds-task-assignee-grid button:hover,
+  .ds-task-assignee-grid button.active { background: #e8f4fd; color: #0f7fa8; }
+
+  /* completed */
+  .ds-task-row.completed { grid-template-columns: 34px minmax(0, 1fr); }
+  .ds-task-row.completed strong { text-decoration: line-through; color: #9ca3af; }
+  .ds-completed-toggle {
+    margin: 18px 0 6px;
+    border: 0;
+    background: transparent;
+    color: #3c4043;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .ds-task-body small { display: block; margin-top: 2px; color: #6b7280; font-size: 12px; }
+}
+
+@layer editor {
+  .ds-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(15, 23, 42, 0.10);
+  }
+  .ds-event-editor {
+    position: fixed;
+    z-index: 50;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, calc(100vw - 32px));
+    padding: 20px;
+    border: 1px solid rgba(32, 33, 36, 0.12);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--ds-shadow-modal);
+  }
+  .ds-editor-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    color: #64748b;
+    cursor: pointer;
+  }
+  .ds-editor-close:hover { background: #f1f5f9; }
+  .ds-editor-label { display: block; color: #64748b; font-size: 12px; margin-bottom: 6px; }
+  .ds-editor-title-row { display: grid; grid-template-columns: 1fr 44px; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .ds-color-button { height: 34px; border: 1px solid var(--ds-line-strong); border-radius: 8px; background: #fff; display: grid; place-items: center; }
+  .ds-color-button span { width: 16px; height: 16px; border-radius: 5px; background: var(--ds-editor-color); }
+  .ds-editor-tabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: #f1f5f9; margin-bottom: 13px; }
+  .ds-editor-tabs button { height: 28px; border: 0; border-radius: 7px; background: transparent; padding: 0 11px; font-size: 12px; cursor: pointer; }
+  .ds-editor-tabs button.active { background: #e8f4fd; color: #0f7fa8; }
+  .ds-editor-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 12px; }
+  .ds-editor-icon { color: #475569; text-align: center; }
+  .ds-editor-date-row { grid-template-columns: 24px minmax(0, 1fr) auto; align-items: end; }
+  .ds-editor-date-fields { display: grid; grid-template-columns: 1.2fr 0.8fr 0.8fr; gap: 8px; }
+  .ds-editor-date-fields.single { grid-template-columns: 1fr; }
+  .ds-editor-date-fields label { display: grid; gap: 4px; color: #64748b; font-size: 11px; }
+  .ds-editor-date-fields label.disabled { opacity: 0.5; }
+  .ds-editor-title-row input,
+  .ds-editor-inline-input,
+  .ds-editor-date-fields input,
+  .ds-event-editor textarea {
+    height: 30px;
+    border: 1px solid var(--ds-line-strong);
+    border-radius: 10px;
+    padding: 0 8px;
+    font-size: 12px;
+    background: #fff;
+    outline: 0;
+  }
+  .ds-editor-title-row input { height: 38px; padding: 0 12px; }
+  .ds-event-editor textarea { width: 100%; height: auto; min-height: 77px; resize: vertical; padding: 12px; margin-bottom: 12px; }
+  .ds-editor-title-row input:focus,
+  .ds-editor-inline-input:focus,
+  .ds-editor-date-fields input:focus,
+  .ds-event-editor textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.2); }
+  .ds-editor-outline { height: 30px; border: 1px solid #94a3b8; border-radius: 999px; background: #fff; padding: 0 10px; font-size: 12px; color: #1e3a8a; cursor: pointer; white-space: nowrap; }
+  .ds-editor-error { margin: 0 0 8px; padding: 8px 10px; border-radius: 6px; background: #fef2f2; color: #b91c1c; font-size: 12px; font-weight: 600; }
+  .ds-editor-actions { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; }
+  .ds-editor-actions button { height: 32px; border: 0; border-radius: 6px; padding: 0 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .ds-editor-primary { background: #0b57d0; color: #fff; }
+  .ds-editor-danger { background: #dc2626; color: #fff; }
+  .ds-editor-ghost { background: #f1f5f9; color: #334155; }
+}
+
+@layer command {
+  .ds-command-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    background: rgba(15, 23, 42, 0.16);
+  }
+  .ds-command-palette {
+    position: fixed;
+    z-index: 96;
+    top: 72px;
+    left: 50%;
+    width: min(680px, calc(100vw - 32px));
+    transform: translateX(-50%);
+    border: 1px solid rgba(32, 33, 36, 0.12);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--ds-shadow-modal);
+    overflow: hidden;
+  }
+  .ds-command-input {
+    height: 58px;
+    display: grid;
+    grid-template-columns: 32px 1fr 32px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--ds-line);
+    color: #64748b;
+  }
+  .ds-command-input input { border: 0; outline: 0; background: transparent; font-size: 16px; color: #111827; }
+  .ds-command-input button { border: 0; background: transparent; color: #64748b; cursor: pointer; }
+  .ds-command-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--ds-line);
+  }
+  .ds-command-actions button {
+    height: 40px;
+    border: 1px solid var(--ds-line);
+    border-radius: 10px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #334155;
+  }
+  .ds-command-actions button:hover { background: #f8fafc; }
+  .ds-command-results { max-height: 420px; overflow: auto; padding: 10px 8px 14px; }
+  .ds-command-results h3 { margin: 12px 10px 6px; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .ds-command-results p { margin: 6px 10px; color: #94a3b8; font-size: 13px; }
+  .ds-command-results button {
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 9px;
+    text-align: left;
+    cursor: pointer;
+    padding: 6px 10px;
+  }
+  .ds-command-results button:hover { background: #f8fafc; }
+  .ds-command-results strong { font-size: 14px; font-weight: 500; color: #202124; }
+  .ds-command-results small { color: #64748b; font-size: 12px; }
+  .ds-command-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ds-command-color); }
+}
+
+@layer dialogs {
+  .ds-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(15, 23, 42, 0.16);
+  }
+  .ds-calendar-dialog,
+  .ds-form-dialog,
+  .ds-google-settings {
+    position: fixed;
+    z-index: 91;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, calc(100vw - 32px));
+    padding: 28px;
+    border: 1px solid rgba(32, 33, 36, 0.12);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--ds-shadow-modal);
+    color: #202124;
+  }
+  .ds-calendar-dialog h2,
+  .ds-form-dialog h2 {
+    margin: 0 0 22px;
+    color: #202124;
+    font-size: 24px;
+    font-weight: 620;
+    letter-spacing: -0.03em;
+  }
+  .ds-dialog-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #5f6368;
+    font-size: 26px;
+    cursor: pointer;
+  }
+  .ds-dialog-close:hover { background: #f1f3f4; }
+  .ds-form-field,
+  .ds-google-field {
+    position: relative;
+    display: grid;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+  .ds-form-field span,
+  .ds-google-field span { color: #5f6b7a; font-size: 12px; font-weight: 650; }
+  .ds-form-field input,
+  .ds-form-field textarea,
+  .ds-google-field input,
+  .ds-google-field textarea {
+    width: 100%;
+    min-height: 40px;
+    padding: 10px 12px;
+    color: #202124;
+    font-size: 14px;
+    border: 1px solid var(--ds-line-strong);
+    border-radius: 10px;
+    background: #fff;
+    outline: 0;
+  }
+  .ds-form-field.textarea textarea,
+  .ds-google-field.textarea textarea { min-height: 96px; resize: vertical; }
+  .ds-google-field.timezone { display: grid; grid-template-columns: 1fr 38px; align-items: end; }
+  .ds-google-field.timezone button { width: 36px; height: 40px; margin: 0; border: 0; border-radius: 9px; background: transparent; color: #64748b; font-size: 22px; cursor: pointer; }
+  .ds-calendar-owner { display: grid; gap: 3px; margin: 4px 0 22px; }
+  .ds-calendar-owner span { font-size: 12px; color: #5f6b7a; }
+  .ds-calendar-owner strong { font-size: 14px; font-weight: 500; color: #202124; }
+  .ds-dialog-actions-final { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .ds-dialog-primary,
+  .ds-dialog-secondary,
+  .ds-create-calendar-primary {
+    height: 38px;
+    border: 0;
+    border-radius: 9px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .ds-dialog-primary,
+  .ds-create-calendar-primary { background: var(--ds-blue); color: #fff; }
+  .ds-dialog-primary:hover,
+  .ds-create-calendar-primary:hover { background: var(--ds-blue-hover); }
+  .ds-dialog-primary:disabled,
+  .ds-create-calendar-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ds-dialog-secondary { background: #f1f5f9; color: #334155; }
+
+  .ds-google-settings {
+    width: min(480px, calc(100vw - 32px));
+    padding: 28px;
+  }
+  .ds-google-settings header {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+    margin: 0 42px 22px 0;
+  }
+  .ds-google-settings header > span {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: var(--ds-blue-soft);
+    color: var(--ds-blue);
+  }
+  .ds-google-settings h2 {
+    margin: 0 0 4px;
+    font-size: 23px;
+    line-height: 1.15;
+    font-weight: 680;
+    letter-spacing: -0.025em;
+    color: #172033;
+  }
+  .ds-google-settings p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .ds-google-account-card {
+    padding: 14px;
+    border: 1px solid var(--ds-line-strong);
+    border-radius: 10px;
+    background: #fbfdff;
+  }
+  .ds-google-account-card > div {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+  }
+  .ds-google-account-card span {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #cbd5e1;
+  }
+  .ds-google-account-card span.connected { background: #0f9f6e; }
+  .ds-google-account-card strong {
+    display: block;
+    margin-bottom: 2px;
+    color: #202124;
+    font-size: 14px;
+    font-weight: 680;
+  }
+  .ds-google-account-card small {
+    display: block;
+    color: #64748b;
+    font-size: 12.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ds-google-settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .ds-google-settings-actions a {
+    height: 38px;
+    padding: 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 650;
+  }
+  .ds-google-settings-actions a.primary { background: var(--ds-blue); color: #fff; }
+  .ds-google-settings-actions a.primary:hover { background: var(--ds-blue-hover); }
+  .ds-google-settings-actions a.secondary { background: #f1f5f9; color: #334155; }
+  .ds-google-settings-actions a.secondary:hover { background: #e2e8f0; }
+}
+
+@layer datepicker {
+  .ds-datepicker-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(32, 33, 36, 0.52);
+  }
+  .ds-datepicker {
+    position: fixed;
+    z-index: 61;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    padding: 20px 18px 16px;
+    border-radius: 20px;
+    background: #e8edf5;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+  }
+  .ds-datepicker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .ds-datepicker-header strong {
+    font-size: 15px;
+    font-weight: 680;
+    color: #202124;
+  }
+  .ds-datepicker-header button {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    background: transparent;
+    color: #5f6368;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border-radius: 999px;
+  }
+  .ds-datepicker-header button:hover { background: rgba(0,0,0,0.08); }
+  .ds-datepicker-weekdays,
+  .ds-datepicker-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .ds-datepicker-weekdays span {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    padding: 4px 0 10px;
+  }
+  .ds-datepicker-grid button {
+    position: relative;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    color: #202124;
+    cursor: pointer;
+  }
+  .ds-datepicker-grid button.outside { color: #b0b8c1; }
+  .ds-datepicker-grid button:hover:not(.selected) { background: rgba(0,0,0,0.07); }
+  .ds-datepicker-grid button.today:not(.selected) span {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    border: 2px solid #1a73e8;
+    color: #1a73e8;
+    font-weight: 700;
+  }
+  .ds-datepicker-grid button.selected span {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: #1a73e8;
+    color: #fff;
+    font-weight: 700;
+  }
+  .ds-datepicker-time {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 14px;
+    padding: 0 4px;
+    color: #6b7280;
+  }
+  .ds-datepicker-time input {
+    flex: 1;
+    height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: #d8dde6;
+    color: #202124;
+    font-size: 14px;
+    padding: 0 12px;
+    outline: 0;
+  }
+  .ds-datepicker-time input::placeholder { color: #9aa0a6; }
+  .ds-datepicker-time input:focus { background: #fff; box-shadow: 0 0 0 2px #1a73e8; }
+  .ds-datepicker-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  .ds-datepicker-cancel {
+    height: 40px;
+    border: 0;
+    background: transparent;
+    color: #1a73e8;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 8px;
+    border-radius: 8px;
+  }
+  .ds-datepicker-cancel:hover { background: rgba(26,115,232,0.08); }
+  .ds-datepicker-done {
+    height: 40px;
+    min-width: 72px;
+    border: 0;
+    border-radius: 999px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 20px;
+  }
+  .ds-datepicker-done:hover { background: #1558b0; }
+  .ds-datepicker-done:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+@layer responsive {
+  @media (max-width: 980px) {
+    .ds-app-shell,
+    .ds-app-shell.task-mode { grid-template-columns: 1fr; }
+    .ds-sidebar { display: none; }
+    .ds-main { grid-column: 1; }
+    .ds-header { grid-template-columns: 1fr; height: auto; min-height: 0; padding: 12px; align-items: stretch; }
+    .ds-header-right { justify-content: flex-start; }
+    .ds-year-view { grid-template-columns: repeat(2, minmax(160px, 1fr)); padding: 18px; }
+    .ds-calendar-dialog,
+    .ds-form-dialog,
+    .ds-google-settings { width: calc(100vw - 24px); padding: 24px; }
+  }
+}
+
+/*
+ * engine layer — overrides @event-calendar/core (engine-base layer).
+ *
+ * Style using background, color, and border properties on our selectors.
+ * Do NOT reassign --ec-* CSS variables (e.g. --ec-today-bg-color, --ec-day-bg-color).
+ * Those are the library's internal wiring — touching them interferes with its
+ * variable cascade in non-obvious ways.
+ */
+@layer engine {
+  .ds-engine-view {
+    width: 100%;
+    min-width: 0;
+    inline-size: 100%;
+    min-inline-size: 0;
+    height: 100%;
+    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: inherit;
+    background: transparent;
+  }
+
+  .ds-engine-view .ec {
+    --ds-grid-boundary: hsl(0 0% 89.8% / 0.78);
+    --ds-grid-major: hsl(0 0% 89.8% / 0.5);
+    --ds-grid-minor: transparent;
+    width: 100%;
+    min-width: 0;
+    inline-size: 100%;
+    min-inline-size: 0;
+    height: 100%;
+    min-height: 0;
+    block-size: 100%;
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ds-text);
+    --ec-bg-color: transparent;
+    --ec-text-color: var(--ds-text);
+    --ec-border-color: var(--ds-grid-boundary) !important;
+    --ec-today-bg-color: transparent;
+    --ec-highlight-color: color-mix(in srgb, var(--ds-blue) 8%, transparent);
+    --ec-now-indicator-color: #ef4444;
+    --ec-event-bg-color: transparent;
+    --ec-event-text-color: #0f172a;
+    --ec-event-col-gap: 2px;
+  }
+
+  .ds-engine-view .ec-toolbar { display: none; }
+
+  .ds-engine-view .ec-main {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-height: 0;
+    border: 0 !important;
+    border-top: 0;
+    overflow: auto;
+    background: transparent;
+  }
+
+  .ds-engine-view .ec-header {
+    flex: 0 0 auto;
+    background: var(--ds-bg);
+    border-bottom: 1px solid var(--ds-grid-boundary);
+    z-index: 5;
+    overflow: hidden;
+  }
+
+  .ds-engine-view .ec-sidebar {
+    background: var(--ds-bg);
+    color: var(--ds-muted);
+    border-color: var(--ds-grid-boundary) !important;
+    font-size: 12px;
+  }
+
+  .ds-engine-view .ec-time-grid .ec-header .ec-sidebar {
+    min-width: 56px;
+    padding-inline: 8px;
+  }
+
+  .ds-engine-view .ec-time-grid .ec-body .ec-sidebar {
+    min-width: 56px;
+    padding-inline: 8px;
+    color: var(--ds-subtle);
+    font-size: 10px;
+  }
+
+  .ds-engine-view .ec-col-head,
+  .ds-engine-view .ec-col-group {
+    min-height: 54px;
+    background: var(--ds-bg);
+    color: var(--ds-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--ds-grid-boundary) !important;
+  }
+
+  .ds-engine-view .ec-col-head > *,
+  .ds-engine-view .ec-col-group > * {
+    position: static;
+    display: grid;
+    place-items: center;
+    gap: 1px;
+  }
+
+  .ds-engine-view .ec-col-head span,
+  .ds-engine-view .ec-col-group span {
+    color: var(--ds-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  .ds-engine-view .ec-col-head strong,
+  .ds-engine-view .ec-col-group strong {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    color: var(--ds-text);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .day-hover .ds-engine-view .ec-col-head:not(.ec-today):hover strong,
+  .day-hover .ds-engine-view .ec-col-group:not(.ec-today):hover strong {
+    background: #f1f5f8;
+  }
+
+  .ds-engine-view .ec-col-head.ec-today,
+  .ds-engine-view .ec-col-group.ec-today {
+    --ec-day-bg-color: var(--ds-panel) !important;
+    color: var(--ds-blue);
+    background: var(--ds-panel) !important;
+    background-color: var(--ds-panel) !important;
+  }
+
+  .ds-engine-view .ec-col-head.ec-today strong,
+  .ds-engine-view .ec-col-group.ec-today strong {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: var(--ds-blue);
+    color: #fff;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .ds-engine-view .ec-all-day {
+    min-height: 30px;
+    border-bottom: 1px solid var(--ds-grid-boundary);
+    background: #fff;
+  }
+
+  .ds-engine-view .ec-all-day .ec-sidebar {
+    min-width: 56px;
+    padding: 0 8px;
+    color: #8b949e;
+    font-size: 0;
+    text-transform: lowercase;
+  }
+
+  .ds-engine-view .ec-day {
+    --ec-day-bg-color: #fff !important;
+    border-color: var(--ds-grid-boundary) !important;
+    background-color: #fff !important;
+  }
+
+  .ds-engine-view .ec-day.ec-today {
+    --ec-day-bg-color: #fff !important;
+    background-color: #fff !important;
+  }
+
+  .ds-engine-view .ec-time-grid .ec-body .ec-day {
+    --ec-day-bg-color: #fff !important;
+    background-color: #fff !important;
+    background-image:
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent calc(var(--ec-slot-height, 31px) - 1px),
+        var(--ds-grid-minor) calc(var(--ec-slot-height, 31px) - 1px),
+        var(--ds-grid-minor) var(--ec-slot-height, 31px),
+        transparent var(--ec-slot-height, 31px),
+        transparent calc((var(--ec-slot-height, 31px) * 2) - 1px),
+        var(--ds-grid-major) calc((var(--ec-slot-height, 31px) * 2) - 1px),
+        var(--ds-grid-major) calc(var(--ec-slot-height, 31px) * 2)
+      ) !important;
+    background-size:
+      100% calc(var(--ec-slot-height, 31px) * var(--ec-slot-label-periodicity, 2)) !important;
+  }
+
+  .ds-engine-view .ec-time-grid .ec-body .ec-sidebar {
+    background-image: none !important;
+    background-color: #fff !important;
+  }
+
+  /* Keep the time-label gutter visually blank (no horizontal grid strokes). */
+  .ds-engine-view .ec-time-grid .ec-header .ec-sidebar,
+  .ds-engine-view .ec-all-day .ec-sidebar,
+  .ds-engine-view .ec-time-grid .ec-body .ec-sidebar,
+  .ds-engine-view .ec-time-grid .ec-body .ec-sidebar * {
+    border-top-color: transparent !important;
+    border-bottom-color: transparent !important;
+  }
+
+  .ds-engine-view .ec-slot {
+    color: #94a3b8;
+    font-size: 9.5px;
+    line-height: 1;
+    padding-inline-end: 8px;
+  }
+
+  .ds-engine-view .ec-event {
+    border: 0;
+    border-left: 3px solid var(--ds-event-color, #2563eb);
+    border-bottom: 3px solid #fff;
+    border-radius: 5px;
+    clip-path: inset(0 0 3px 0 round 5px);
+    background: color-mix(in srgb, var(--ds-event-color, #2563eb) 12%, white);
+    background-clip: padding-box;
+    color: color-mix(in srgb, var(--ds-event-color, #2563eb) 62%, #18181b);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-event-color, #2563eb) 7%, transparent);
+    padding: 0;
+    overflow: hidden;
+    min-width: 0;
+    container-type: inline-size;
+    margin-inline-start: 0;
+    margin-inline-end: 7px;
+    inline-size: calc(100% - 7px - var(--ec-event-col-gap, 2px));
+  }
+
+  .ds-engine-view .ec-event:hover {
+    filter: brightness(0.97);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-event-color, #2563eb) 14%, transparent);
+  }
+  .ds-engine-view .ec-event.ec-draggable { cursor: grab; }
+  .ds-engine-view .ec-dragging .ec-event.ec-draggable { cursor: grabbing; }
+  .ds-engine-view .ec-event.is-draft {
+    outline: 1px dashed color-mix(in srgb, var(--ds-event-color, #2563eb) 65%, transparent);
+    background: color-mix(in srgb, var(--ds-event-color, #2563eb) 22%, white);
+  }
+
+  .ds-engine-view .ec-all-day .ec-event {
+    min-height: 21px;
+    height: 21px;
+    border-bottom: 0;
+    border-radius: 5px;
+    clip-path: none;
+    margin-block: 3px 3px;
+    margin-inline: 4px;
+    inline-size: calc(100% - 8px);
+    left: 4px !important;
+    width: calc(100% - 8px) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-event-color, #2563eb) 6%, transparent);
+  }
+
+  .ds-engine-view .ec-resizer {
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  .ds-engine-view .ec-event:hover .ec-resizer,
+  .ds-engine-view .ec-event.ec-dragging .ec-resizer,
+  .ds-engine-view .ec-event.ec-preview .ec-resizer {
+    opacity: 1;
+  }
+
+  .ds-engine-view .ec-event-body {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+  }
+
+  .ds-engine-view .ec-event-time,
+  .ds-engine-view .ec-event-title { display: none; }
+
+  .ds-ec-event-content {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    padding: 4px 8px;
+    text-align: left;
+    overflow: hidden;
+    background: inherit;
+  }
+
+  .ds-engine-view .ec-all-day .ds-ec-event-content,
+  .ds-engine-view .ec-day-grid .ds-ec-event-content {
+    gap: 5px;
+    padding: 2px 8px 2px 7px;
+    min-height: 22px;
+  }
+
+  .ds-engine-view .ec-all-day .ds-ec-event-content strong {
+    font-size: 11.5px;
+    line-height: 1;
+  }
+
+  .ds-ec-event-content strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--ds-event-color, #2563eb) 66%, #18181b);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .ds-ec-event-content span {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--ds-event-color, #2563eb) 12%, var(--ds-muted));
+    font-size: 9.5px;
+    line-height: 1;
+  }
+
+  @container (max-width: 104px) {
+    .ds-ec-event-content span { display: none; }
+  }
+
+  .ds-engine-view .ec-preview,
+  .ds-engine-view .ec-ghost { opacity: 0.72; }
+
+  .ds-engine-view .ec-pointer {
+    border-radius: 6px;
+    background: rgba(22, 135, 179, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(22, 135, 179, 0.24);
+  }
+
+  .ds-engine-view .ec-now-indicator {
+    border-block-start-width: 1px;
+  }
+
+  .ds-engine-view .ec-now-indicator::before {
+    width: 8px;
+    height: 8px;
+    margin-block-start: -5px;
+    margin-inline-start: -5px;
+  }
+}
+
+/*
+ * Host-defense overrides (unlayered, integration contract):
+ * These selectors intentionally sit outside @layer to protect critical
+ * DailySked chrome from aggressive host globals.
+ */
+
+/* CTA/link hardening */
+.ds-google-connect-banner a,
+.ds-widget-connect-bar a {
+  background: var(--ds-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+.ds-google-connect-banner a:hover,
+.ds-widget-connect-bar a:hover {
+  background: var(--ds-blue-hover);
+  color: #fff;
+}
+
+/* Toolbar chrome hardening */
+.ds-header .ds-today-btn,
+.ds-header .ds-icon-btn {
+  height: 34px;
+  min-width: 34px;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: 7px;
+  background: #fff;
+  color: #2f3742;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.ds-header .ds-today-btn {
+  min-width: 64px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ds-header .ds-icon-btn.ds-nav-icon {
+  border-color: transparent;
+  background: transparent;
+}
+
+.ds-header .ds-today-btn:hover,
+.ds-header .ds-icon-btn:hover {
+  background: #eef0f2;
+}
+
+.ds-header .ds-icon-btn.ds-nav-icon:hover {
+  border-color: transparent;
+  background: #e8eaed;
+}
+
+.ds-header .ds-header-left h2 {
+  margin: 0 0 0 12px;
+  color: var(--ds-text);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 34px;
+  white-space: nowrap;
+}
+
+.ds-header .ds-mode-toggle {
+  display: inline-flex;
+  overflow: hidden;
+  height: 34px;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.ds-header .ds-mode-toggle button {
+  width: 40px;
+  height: 32px;
+  border: 0;
+  border-right: 1px solid var(--ds-line);
+  background: transparent;
+  color: #64707d;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.ds-header .ds-mode-toggle button:last-child {
+  border-right: 0;
+}
+
+.ds-header .ds-mode-toggle button.active {
+  background: var(--ds-blue-soft);
+  color: var(--ds-blue);
+}
+
+.ds-header .ds-mode-toggle button:hover:not(.active) {
+  background: #f0f2f4;
+}
+
+/* Calendar heading typography hardening */
+.ds-engine-view .ec-col-head strong,
+.ds-engine-view .ec-col-group strong,
+.ds-engine-view .ec-col-head.ec-today strong,
+.ds-engine-view .ec-col-group.ec-today strong {
+  font-weight: 500 !important;
+}
+
+/* Task workspace hardening */
+.ds-app-shell.task-mode .ds-content {
+  display: block !important;
+  min-height: 0 !important;
+}
+
+.ds-app-shell.task-mode .ds-task-view {
+  height: calc(100% - var(--ds-task-surface-offset)) !important;
+  min-height: calc(100% - var(--ds-task-surface-offset)) !important;
+  margin-top: var(--ds-task-surface-offset) !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+  display: block !important;
+  overflow: auto !important;
+  padding: 50px 72px 80px !important;
+}
+
+.ds-app-shell.task-mode .ds-task-surface {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 100% !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.ds-app-shell.task-mode .ds-task-header h2 {
+  margin: 0;
+  color: #202124;
+  font-size: 31px;
+  font-weight: 690;
+  letter-spacing: -0.03em;
+}
+
+.ds-app-shell.task-mode .ds-task-group-header {
+  color: #202124;
+  font-size: 17px;
+  font-weight: 720;
+}
+
+.ds-app-shell.task-mode .ds-task-row strong {
+  color: #202124;
+  font-size: 15.5px;
+  font-weight: 430;
+}
