@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ChevronLeft, ChevronRight, Settings } from 'lucide-svelte';
   import type { AppMode, ScheduleView } from './types';
-  import { addDays, monthTitle, startOfWeek } from './date';
+  import { monthTitle } from './date';
   import ModeToggle from './ModeToggle.svelte';
   import ViewMenu from './ViewMenu.svelte';
 
@@ -21,10 +21,8 @@
   } = $props();
 
   const heading = $derived(title ?? (view === 'timeGridDay'
-    ? currentDate.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })
-    : view === 'timeGridWeek'
-      ? `${startOfWeek(currentDate).toLocaleDateString('en', { month: 'short', day: 'numeric' })} – ${addDays(startOfWeek(currentDate), 6).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}`
-      : view === 'dayGridYear'
+    ? currentDate.toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })
+    : view === 'dayGridYear'
         ? String(currentDate.getFullYear())
         : monthTitle(currentDate)));
 </script>

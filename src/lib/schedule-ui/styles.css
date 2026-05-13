@@ -301,7 +301,15 @@
   }
   .ds-mini-header button:hover { background: #eef2f5; }
   .ds-mini-weekdays,
-  .ds-mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .ds-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+  .ds-mini-grid {
+    overflow: hidden;
+  }
   .ds-mini-weekdays span {
     text-align: center;
     font-size: 11px;
@@ -311,8 +319,11 @@
   }
   .ds-mini-grid button {
     position: relative;
+    inline-size: 100%;
+    min-inline-size: 0;
     height: 31px;
     border: 0;
+    padding: 0;
     background: transparent;
     border-radius: 999px;
     display: grid;
@@ -502,7 +513,7 @@
     display: grid;
     grid-template-columns: minmax(320px, 1fr) auto;
     padding: 18px 18px 14px;
-    align-items: start;
+    align-items: center;
     gap: 16px;
     background: var(--ds-bg);
   }
@@ -1715,6 +1726,14 @@
   }
 }
 
+/*
+ * engine layer — overrides @event-calendar/core (engine-base layer).
+ *
+ * Style using background, color, and border properties on our selectors.
+ * Do NOT reassign --ec-* CSS variables (e.g. --ec-today-bg-color, --ec-day-bg-color).
+ * Those are the library's internal wiring — touching them interferes with its
+ * variable cascade in non-obvious ways.
+ */
 @layer engine {
   .ds-engine-view {
     width: 100%;
@@ -1777,14 +1796,14 @@
 
   .ds-engine-view .ec-header {
     flex: 0 0 auto;
-    background: var(--ds-bg);
-    border-bottom: 1px solid var(--ds-line);
+    background: #fff;
+    border-bottom: 1px solid var(--ds-grid-boundary);
     z-index: 5;
     overflow: hidden;
   }
 
   .ds-engine-view .ec-sidebar {
-    background: var(--ds-bg);
+    background: #fff;
     color: var(--ds-muted);
     border-color: var(--ds-grid-boundary) !important;
     font-size: 12px;
@@ -1805,7 +1824,7 @@
   .ds-engine-view .ec-col-head,
   .ds-engine-view .ec-col-group {
     min-height: 54px;
-    background: var(--ds-bg);
+    background: #fff;
     color: var(--ds-muted);
     font-size: 11px;
     font-weight: 700;
@@ -1855,10 +1874,10 @@
 
   .ds-engine-view .ec-col-head.ec-today,
   .ds-engine-view .ec-col-group.ec-today {
-    --ec-day-bg-color: var(--ds-bg) !important;
+    --ec-day-bg-color: #fff !important;
     color: var(--ds-blue);
-    background: var(--ds-bg) !important;
-    background-color: var(--ds-bg) !important;
+    background: #fff !important;
+    background-color: #fff !important;
   }
 
   .ds-engine-view .ec-col-head.ec-today strong,
@@ -1871,7 +1890,7 @@
     background: var(--ds-blue);
     color: #fff;
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1;
   }
 
@@ -2082,3 +2101,4 @@
     margin-inline-start: -5px;
   }
 }
+

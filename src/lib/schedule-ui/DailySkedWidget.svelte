@@ -60,7 +60,7 @@
   const now = new Date();
   const renderEvents = $derived([...activeEvents, ...taskEvents]
     .filter((event) => eventInRange(event, selectedRange.start, selectedRange.end))
-    .filter((event) => range !== 'upcoming' || event.allDay || asDate(event.end ?? event.start).getTime() > now.getTime())
+    .filter((event) => range !== 'upcoming' || eventEffectiveEndMs(event) > now.getTime())
     .map((event) => ({
       ...event,
       color: event.color ?? activeCalendars.find((calendar) => calendar.id === event.calendarId)?.color
@@ -76,6 +76,7 @@
     height: '100%',
     firstDay: 0,
     noEventsContent: emptyContent,
+    eventContent,
     eventClick: handleEventClick
   });
 
@@ -134,10 +135,35 @@
     if (event) onOpenEvent?.(event);
   }
 
+  function escapeHtml(value: unknown) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('\"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function eventContent(info: any) {
+    const title = escapeHtml(info.event.title);
+    const timeText = info.event.allDay ? 'All Day' : (info.timeText || '');
+    return {
+      html: `<div class="ds-widget-event-content"><span class="ec-event-time">${escapeHtml(timeText)}</span><span class="ec-event-title">${title}</span></div>`
+    };
+  }
+
   function eventInRange(event: ScheduleEvent, start: Date, end: Date) {
     const eventStart = asDate(event.start).getTime();
     const eventEnd = event.end ? asDate(event.end).getTime() : eventStart;
     return eventEnd >= start.getTime() && eventStart < end.getTime();
+  }
+
+  function eventEffectiveEndMs(event: ScheduleEvent) {
+    if (event.end) return asDate(event.end).getTime();
+    const start = asDate(event.start);
+    // Keep timed events visible for a reasonable default duration.
+    if (!event.allDay) return start.getTime() + (60 * 60 * 1000);
+    return addDays(stripTime(start), 1).getTime();
   }
 
   function widgetRange(date: Date, mode: WidgetRange) {
@@ -393,16 +419,17 @@
   }
 
   .ds-widget-list :global(.ec-list .ec-event) {
-    margin: 7px 0;
-    padding: 11px 14px 11px 16px;
+    margin: 4px 0;
+    min-height: 24px;
+    padding: 4px 8px 4px 10px;
     border: 0;
-    border-left: 4px solid var(--ds-event-color, #2563eb);
-    border-radius: 8px;
+    border-left: 3px solid var(--ds-event-color, #2563eb);
+    border-radius: 6px;
     background: color-mix(in srgb, var(--ds-event-color, #2563eb) 13%, white);
     color: color-mix(in srgb, var(--ds-event-color, #2563eb) 64%, #1f2937);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-event-color, #2563eb) 7%, transparent);
-    display: grid;
-    gap: 3px;
+    display: flex;
+    align-items: center;
   }
 
   .ds-widget-list :global(.ec-list .ec-event:hover) {
@@ -411,22 +438,37 @@
   }
 
   .ds-widget-list :global(.ec-list .ec-event-body) {
-    display: contents;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ds-widget-list :global(.ec-list .ds-widget-event-content) {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .ds-widget-list :global(.ec-list .ec-event-time) {
-    font-size: 12px;
+    flex: 0 0 auto;
+    font-size: 10.5px;
     color: color-mix(in srgb, var(--ds-event-color, #2563eb) 14%, #64748b);
-    font-weight: 500;
-    line-height: 1.2;
-    order: -1;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .ds-widget-list :global(.ec-list .ec-event-title) {
-    font-size: 15px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
     font-weight: 580;
     color: color-mix(in srgb, var(--ds-event-color, #2563eb) 68%, #1f2937);
-    line-height: 1.25;
+    line-height: 1;
   }
 
   .ds-widget-list :global(.ec-list .ec-no-events) {

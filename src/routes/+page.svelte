@@ -297,7 +297,7 @@
 
   .widget-preview {
     min-height: 0;
-    height: 360px;
+    height: 420px;
   }
 
   @media (max-width: 860px) {
@@ -336,8 +336,8 @@
     }
 
     .widget-preview {
-      min-height: 340px;
-      height: 340px;
+      min-height: 360px;
+      height: 360px;
     }
   }
 </style>
