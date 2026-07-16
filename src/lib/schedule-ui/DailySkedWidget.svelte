@@ -36,7 +36,8 @@
   let syncError = $state('');
 
   const hasExternalData = $derived(events.length > 0 || tasks.length > 0 || calendars.length > 0);
-  const connected = $derived(google?.connected ?? true);
+  const connected = $derived(google ? google.connected : true);
+  const canSyncGoogle = $derived(Boolean(google?.syncEndpoint && connected));
   const themeStyle = $derived(themeToStyle(theme));
   const demoEvents = $derived((!connected && !hasExternalData) ? buildDemoEvents(today) : []);
   const activeEvents = $derived(hasExternalData ? events : [...loadedEvents, ...demoEvents]);
@@ -76,7 +77,7 @@
   });
 
   async function loadFromGoogle() {
-    if (!google?.syncEndpoint || !connected) return;
+    if (!canSyncGoogle || !google?.syncEndpoint) return;
     syncLoading = true;
     syncError = '';
     try {
@@ -194,7 +195,7 @@
       <span><CalendarDays size={15} /></span>
       <strong>{dateLabel(selectedDate)}</strong>
     </div>
-    {#if google?.syncEndpoint}
+    {#if canSyncGoogle}
       <button type="button" aria-label="Refresh schedule" onclick={() => void loadFromGoogle()}>
         <RefreshCw size={15} />
       </button>
