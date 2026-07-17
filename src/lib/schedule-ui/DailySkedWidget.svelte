@@ -220,18 +220,6 @@
     </div>
   {/if}
 
-  {#if !connected && !hasExternalData}
-    <div class="ds-widget-connect-bar">
-      <div>
-        <strong>Connect Google</strong>
-        <span>Compact view for app home screens.</span>
-      </div>
-      {#if google?.connectHref}
-        <a href={google.connectHref}>Connect</a>
-      {/if}
-    </div>
-  {/if}
-
   {#if error}
     <div class="ds-widget-state error" role="alert">
       <strong>Schedule unavailable</strong>
@@ -481,54 +469,6 @@
     color: var(--ds-muted);
     font-size: 12px;
     box-shadow: 0 10px 28px rgba(15, 23, 42, 0.09);
-  }
-
-  .ds-widget-connect-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 10px;
-    margin-bottom: 4px;
-    border: 1px solid var(--ds-blue-line);
-    border-radius: 7px;
-    background: color-mix(in srgb, var(--ds-blue) 7%, white);
-  }
-
-  .ds-widget-connect-bar div {
-    display: grid;
-    gap: 1px;
-    min-width: 0;
-  }
-
-  .ds-widget-connect-bar strong {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--ds-text);
-  }
-
-  .ds-widget-connect-bar span {
-    font-size: 11px;
-    color: var(--ds-muted);
-  }
-
-  .ds-widget-connect-bar a {
-    flex: 0 0 auto;
-    height: 26px;
-    padding: 0 10px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    background: var(--ds-blue);
-    color: white;
-    text-decoration: none;
-    font-size: 11.5px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .ds-widget-connect-bar a:hover {
-    background: var(--ds-blue-hover);
   }
 
   .ds-widget-state {

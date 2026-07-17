@@ -1,17 +1,17 @@
 {
 	"name": "dailysked",
-	"version": "0.2.1-alpha",
+	"version": "0.2.6-alpha",
 	"description": "Opinionated Svelte scheduling UI for Google Calendar and Google Tasks.",
 	"type": "module",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/dailysked/dailysked.git"
+		"url": "git+https://github.com/ryanrlindsay/dailysked.git"
 	},
 	"bugs": {
-		"url": "https://github.com/dailysked/dailysked/issues"
+		"url": "https://github.com/ryanrlindsay/dailysked/issues"
 	},
-	"homepage": "https://github.com/dailysked/dailysked#readme",
+	"homepage": "https://github.com/ryanrlindsay/dailysked#readme",
 	"keywords": [
 		"svelte",
 		"sveltekit",
@@ -53,6 +53,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
+		"build:pages": "BASE_PATH=/dailysked vite build",
 		"package": "svelte-package",
 		"prepack": "pnpm package",
 		"preview": "vite preview",
@@ -75,7 +76,7 @@
 		}
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.57.0",
 		"@sveltejs/package": "^2.5.7",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",

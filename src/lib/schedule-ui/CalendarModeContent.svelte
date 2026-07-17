@@ -7,7 +7,6 @@
   let {
     googleWriteLocked,
     googleAccountEmail,
-    googleConnectHref,
     saveError = '',
     editorOpen = false,
     onDismissError,
@@ -25,7 +24,6 @@
   }: {
     googleWriteLocked: boolean;
     googleAccountEmail?: string;
-    googleConnectHref: string;
     saveError?: string;
     editorOpen?: boolean;
     onDismissError?: () => void;
@@ -43,15 +41,7 @@
   } = $props();
 </script>
 
-{#if googleWriteLocked}
-  <section class="ds-google-connect-banner" aria-label="Google connection required">
-    <div>
-      <strong>Connect Google Calendar to create and sync items</strong>
-      <span>DailySked writes events and tasks through the user's Google OAuth session.</span>
-    </div>
-    <a href={googleConnectHref}>Connect Google</a>
-  </section>
-{:else if googleAccountEmail}
+{#if googleAccountEmail}
   <div class="ds-google-connected-pill" aria-label="Google account connected">
     <span></span>
     Connected to {googleAccountEmail}

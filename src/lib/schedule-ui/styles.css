@@ -164,43 +164,6 @@
     background: transparent;
   }
 
-  .ds-google-connect-banner {
-    position: absolute;
-    z-index: 12;
-    top: 78px;
-    right: 16px;
-    width: min(430px, calc(100% - 32px));
-    min-height: 72px;
-    padding: 14px 14px 14px 16px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 14px;
-    border: 1px solid var(--ds-blue-line);
-    border-radius: 7px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-    backdrop-filter: blur(10px);
-  }
-  .ds-google-connect-banner div { min-width: 0; display: grid; gap: 3px; }
-  .ds-google-connect-banner strong { font-size: 13.5px; font-weight: 700; color: var(--ds-text); }
-  .ds-google-connect-banner span { font-size: 12px; line-height: 1.35; color: var(--ds-muted); }
-  .ds-google-connect-banner a {
-    height: 36px;
-    padding: 0 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 7px;
-    background: var(--ds-blue);
-    color: #fff;
-    text-decoration: none;
-    font-size: 12.5px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .ds-google-connect-banner a:hover { background: var(--ds-blue-hover); }
-
   .ds-google-connected-pill {
     position: absolute;
     z-index: 12;
@@ -1473,8 +1436,7 @@
     background: rgba(15, 23, 42, 0.16);
   }
   .ds-calendar-dialog,
-  .ds-form-dialog,
-  .ds-google-settings {
+  .ds-form-dialog {
     position: fixed;
     z-index: 91;
     top: 50%;
@@ -1560,95 +1522,6 @@
   .ds-create-calendar-primary:disabled { opacity: 0.45; cursor: not-allowed; }
   .ds-dialog-secondary { background: #f1f5f9; color: #334155; }
 
-  .ds-google-settings {
-    width: min(480px, calc(100vw - 32px));
-    padding: 28px;
-  }
-  .ds-google-settings header {
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
-    gap: 14px;
-    margin: 0 42px 22px 0;
-  }
-  .ds-google-settings header > span {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    background: var(--ds-blue-soft);
-    color: var(--ds-blue);
-  }
-  .ds-google-settings h2 {
-    margin: 0 0 4px;
-    font-size: 23px;
-    line-height: 1.15;
-    font-weight: 680;
-    letter-spacing: -0.025em;
-    color: #172033;
-  }
-  .ds-google-settings p {
-    margin: 0;
-    color: #64748b;
-    font-size: 13.5px;
-    line-height: 1.45;
-  }
-  .ds-google-account-card {
-    padding: 14px;
-    border: 1px solid var(--ds-line-strong);
-    border-radius: 10px;
-    background: #fbfdff;
-  }
-  .ds-google-account-card > div {
-    display: grid;
-    grid-template-columns: 12px minmax(0, 1fr);
-    gap: 12px;
-    align-items: center;
-  }
-  .ds-google-account-card span {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: #cbd5e1;
-  }
-  .ds-google-account-card span.connected { background: #0f9f6e; }
-  .ds-google-account-card strong {
-    display: block;
-    margin-bottom: 2px;
-    color: #202124;
-    font-size: 14px;
-    font-weight: 680;
-  }
-  .ds-google-account-card small {
-    display: block;
-    color: #64748b;
-    font-size: 12.5px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ds-google-settings-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-  }
-  .ds-google-settings-actions a {
-    height: 38px;
-    padding: 0 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border-radius: 9px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 650;
-  }
-  .ds-google-settings-actions a.primary { background: var(--ds-blue); color: #fff; }
-  .ds-google-settings-actions a.primary:hover { background: var(--ds-blue-hover); }
-  .ds-google-settings-actions a.secondary { background: #f1f5f9; color: #334155; }
-  .ds-google-settings-actions a.secondary:hover { background: #e2e8f0; }
 }
 
 @layer datepicker {
@@ -1800,8 +1673,7 @@
     .ds-header-right { justify-content: flex-start; }
     .ds-year-view { grid-template-columns: repeat(2, minmax(160px, 1fr)); padding: 18px; }
     .ds-calendar-dialog,
-    .ds-form-dialog,
-    .ds-google-settings { width: calc(100vw - 24px); padding: 24px; }
+    .ds-form-dialog { width: calc(100vw - 24px); padding: 24px; }
   }
 }
 
@@ -2191,20 +2063,6 @@
  * These selectors intentionally sit outside @layer to protect critical
  * DailySked chrome from aggressive host globals.
  */
-
-/* CTA/link hardening */
-.ds-google-connect-banner a,
-.ds-widget-connect-bar a {
-  background: var(--ds-blue);
-  color: #fff;
-  text-decoration: none;
-}
-
-.ds-google-connect-banner a:hover,
-.ds-widget-connect-bar a:hover {
-  background: var(--ds-blue-hover);
-  color: #fff;
-}
 
 /* Toolbar chrome hardening */
 .ds-header .ds-today-btn,

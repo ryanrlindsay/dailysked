@@ -135,7 +135,9 @@ export interface GoogleConfig {
   connected: boolean;
   email?: string;
   primaryCalendarId?: string;
+  /** @deprecated DailySked does not render connection UI. Link to your app's integration screen outside DailySked. */
   connectHref?: string;
+  /** @deprecated DailySked does not render connection UI. Handle disconnect in your app's integration screen. */
   disconnectHref?: string;
   syncEndpoint?: string;
   requireConnection?: boolean;

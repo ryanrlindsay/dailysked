@@ -4,7 +4,6 @@
   import CreateListDialog from './CreateListDialog.svelte';
   import CreateCalendarDialog from './CreateCalendarDialog.svelte';
   import EventEditor from './EventEditor.svelte';
-  import GoogleSettingsDialog from './GoogleSettingsDialog.svelte';
   import Header from './Header.svelte';
   import Sidebar from './Sidebar.svelte';
   import TaskModeContent from './TaskModeContent.svelte';
@@ -61,7 +60,6 @@
   let selectedEvent = $state<ScheduleEvent | null>(null);
   let calendarDialogOpen = $state(false);
   let listDialogOpen = $state(false);
-  let settingsOpen = $state(false);
   let taskLists = $state<TaskList[]>(untrack(() => initialTaskLists.length ? [...initialTaskLists] : [{ id: 'default', name: 'Tasks' }]));
   let activeTaskListId = $state(untrack(() => initialTaskListId ?? taskLists[0]?.id ?? 'default'));
   let tasks = $state<ScheduleTask[]>(untrack(() => [...initialTasks]));
@@ -91,8 +89,6 @@
     styleEntries.push(`--ds-sidebar-bleed:${sidebarBleedPx}px`);
     return styleEntries.join(';');
   });
-  const googleConnectHref = $derived(google?.connectHref ?? '/api/google/oauth/start');
-  const googleDisconnectHref = $derived(google?.disconnectHref ?? '/api/google/oauth/disconnect');
   const googleAccountEmail = $derived(google?.email);
   const googleWriteLocked = $derived((google?.requireConnection !== false) && !googleConnected);
   const firstVisibleCalendarId = $derived(sources.find((calendar) => calendar.visible !== false)?.id ?? sources[0]?.id);
@@ -599,7 +595,6 @@
       onModeChange={(next) => (mode = next)}
       onCreate={openModeCreate}
       onOpenCommand={() => (commandOpen = true)}
-      onOpenSettings={() => (settingsOpen = true)}
     />
 
     <div class="ds-content">
@@ -620,7 +615,6 @@
         <CalendarModeContent
           {googleWriteLocked}
           {googleAccountEmail}
-          {googleConnectHref}
           {saveError}
           {editorOpen}
           onDismissError={() => (saveError = '')}
@@ -665,13 +659,4 @@
     />
   {/if}
 
-  {#if settingsOpen}
-    <GoogleSettingsDialog
-      connected={googleConnected}
-      email={googleAccountEmail}
-      connectHref={googleConnectHref}
-      disconnectHref={googleDisconnectHref}
-      onClose={() => (settingsOpen = false)}
-    />
-  {/if}
 </div>

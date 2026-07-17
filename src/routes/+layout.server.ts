@@ -1,6 +1,8 @@
 import type { LayoutServerLoad } from './$types';
 import { google } from './lib/google';
 
+export const prerender = true;
+
 export const load: LayoutServerLoad = async (event) => {
 	const data = await google.loadData(event);
 	return {

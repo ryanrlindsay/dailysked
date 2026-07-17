@@ -56,6 +56,10 @@ export interface GoogleHandlerConfig {
 	redirectUri: string;
 	/** Where to redirect after a successful OAuth connect. Defaults to '/'. */
 	afterConnectRedirect?: string;
+	/** Where to redirect after disconnect. When unset, disconnect returns JSON. */
+	afterDisconnectRedirect?: string;
+	/** Where to redirect when OAuth is started but required config is missing. When unset, returns JSON. */
+	notConfiguredRedirect?: string;
 	scopes?: readonly string[];
 	/**
 	 * Custom token storage. Defaults to httpOnly cookie storage.
@@ -89,6 +93,14 @@ export interface GoogleData {
 	tasks: ScheduleTask[];
 }
 
+export interface GooglePageData {
+	googleAccount: GoogleData['account'] | null;
+	calendars: ScheduleCalendar[];
+	events: ScheduleEvent[];
+	taskLists: TaskList[];
+	tasks: ScheduleTask[];
+}
+
 export interface GoogleHandlers {
 	/** GET /api/google/oauth/start */
 	oauthStart: Handler;
@@ -115,6 +127,13 @@ export interface GoogleHandlers {
 	 * };
 	 */
 	loadData(event: RequestEvent): Promise<GoogleData | null>;
+	/**
+	 * Same data as loadData, shaped for direct spreading from SvelteKit load
+	 * functions into DailySkedCalendar or DailySkedWidget props.
+	 */
+	loadPageData(event: RequestEvent): Promise<GooglePageData>;
+	/** True when client id, client secret, and redirect URI are present. */
+	isConfigured(): boolean;
 }
 
 // --- Factory ---
@@ -123,11 +142,14 @@ export function createGoogleHandlers(config: GoogleHandlerConfig): GoogleHandler
 	const {
 		clientId, clientSecret, redirectUri,
 		afterConnectRedirect = '/',
+		afterDisconnectRedirect,
+		notConfiguredRedirect,
 		scopes = GOOGLE_SYNC_SCOPES,
 		tokenStore = cookieTokenStore
 	} = config;
 
 	const adapter = createGoogleSyncAdapter({ clientId, redirectUri });
+	const isConfigured = () => Boolean(clientId && clientSecret && redirectUri);
 
 	async function refreshIfNeeded(event: RequestEvent, stored: GoogleTokenSession): Promise<GoogleTokenSession> {
 		if (!stored.expiresAt || Date.now() <= stored.expiresAt - 60_000 || !stored.refreshToken) return stored;
@@ -159,9 +181,29 @@ export function createGoogleHandlers(config: GoogleHandlerConfig): GoogleHandler
 		return { session, adapter };
 	}
 
+	async function loadGoogleData(event: RequestEvent): Promise<GoogleData | null> {
+		const ctx = await getContext(event);
+		if (!ctx) return null;
+		const [calendars, taskLists] = await Promise.all([
+			ctx.adapter.listCalendars(ctx.session).catch(() => []),
+			ctx.adapter.listTaskLists(ctx.session).catch(() => [])
+		]);
+		const [eventsArrays, tasksArrays] = await Promise.all([
+			Promise.all(calendars.map((c) => ctx.adapter.listEvents(ctx.session, c.id).catch(() => []))),
+			Promise.all(taskLists.map((l) => ctx.adapter.listTasks(ctx.session, l.id).catch(() => [])))
+		]);
+		return {
+			account: { email: ctx.session.email, connected: true },
+			calendars, events: eventsArrays.flat(), taskLists, tasks: tasksArrays.flat()
+		};
+	}
+
 	return {
 		oauthStart: async ({ url, cookies }) => {
-			if (!clientId || !redirectUri) return json({ error: 'Google OAuth is not configured.' }, { status: 500 });
+			if (!isConfigured()) {
+				if (notConfiguredRedirect) return redirect(302, notConfiguredRedirect);
+				return json({ error: 'Google OAuth is not configured.' }, { status: 500 });
+			}
 			const state = crypto.randomUUID();
 			cookies.set('dailysked_google_oauth_state', state, {
 				httpOnly: true, sameSite: 'lax', secure: url.protocol === 'https:', path: '/', maxAge: 600
@@ -181,7 +223,10 @@ export function createGoogleHandlers(config: GoogleHandlerConfig): GoogleHandler
 			const code = url.searchParams.get('code');
 			if (!expectedState || expectedState !== state) return json({ error: 'Invalid OAuth state.' }, { status: 400 });
 			if (!code) return json({ error: 'Missing authorization code.' }, { status: 400 });
-			if (!clientId || !clientSecret || !redirectUri) return json({ error: 'Google OAuth is not configured.' }, { status: 500 });
+			if (!isConfigured()) {
+				if (notConfiguredRedirect) return redirect(302, notConfiguredRedirect);
+				return json({ error: 'Google OAuth is not configured.' }, { status: 500 });
+			}
 
 			const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
 				method: 'POST',
@@ -215,6 +260,7 @@ export function createGoogleHandlers(config: GoogleHandlerConfig): GoogleHandler
 
 		oauthDisconnect: async (event) => {
 			await tokenStore.delete(event);
+			if (afterDisconnectRedirect) return redirect(302, afterDisconnectRedirect);
 			return json({ ok: true });
 		},
 
@@ -288,22 +334,20 @@ export function createGoogleHandlers(config: GoogleHandlerConfig): GoogleHandler
 			}
 		},
 
-		loadData: async (event) => {
-			const ctx = await getContext(event);
-			if (!ctx) return null;
-			const [calendars, taskLists] = await Promise.all([
-				ctx.adapter.listCalendars(ctx.session).catch(() => []),
-				ctx.adapter.listTaskLists(ctx.session).catch(() => [])
-			]);
-			const [eventsArrays, tasksArrays] = await Promise.all([
-				Promise.all(calendars.map((c) => ctx.adapter.listEvents(ctx.session, c.id).catch(() => []))),
-				Promise.all(taskLists.map((l) => ctx.adapter.listTasks(ctx.session, l.id).catch(() => [])))
-			]);
+		loadData: loadGoogleData,
+
+		loadPageData: async (event) => {
+			const data = await loadGoogleData(event);
 			return {
-				account: { email: ctx.session.email, connected: true },
-				calendars, events: eventsArrays.flat(), taskLists, tasks: tasksArrays.flat()
+				googleAccount: data?.account ?? null,
+				calendars: data?.calendars ?? [],
+				events: data?.events ?? [],
+				taskLists: data?.taskLists ?? [],
+				tasks: data?.tasks ?? []
 			};
-		}
+		},
+
+		isConfigured
 	};
 }
 

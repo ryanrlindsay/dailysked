@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { ChevronLeft, ChevronRight, Settings } from 'lucide-svelte';
+  import { ChevronLeft, ChevronRight } from 'lucide-svelte';
   import type { AppMode, ScheduleView } from './types';
   import { monthTitle } from './date';
   import ModeToggle from './ModeToggle.svelte';
   import ViewMenu from './ViewMenu.svelte';
 
-  let { currentDate, view, mode = 'calendar', title, onPrev, onNext, onToday, onViewChange, onModeChange, onOpenSettings }: {
+  let { currentDate, view, mode = 'calendar', title, onPrev, onNext, onToday, onViewChange, onModeChange }: {
     currentDate: Date;
     view: ScheduleView;
     mode?: AppMode;
@@ -17,7 +17,6 @@
     onModeChange: (mode: AppMode) => void;
     onCreate: () => void;
     onOpenCommand: () => void;
-    onOpenSettings?: () => void;
   } = $props();
 
   const heading = $derived(title ?? (view === 'timeGridDay'
@@ -44,6 +43,5 @@
       <ViewMenu {view} onChange={onViewChange} />
     {/if}
     <ModeToggle {mode} onChange={onModeChange} />
-    <button class="ds-icon-btn ds-settings-btn" type="button" onclick={onOpenSettings} aria-label="Settings"><Settings size={18} /></button>
   </div>
 </header>
